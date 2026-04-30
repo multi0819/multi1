@@ -9,6 +9,56 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+
+<!-- Firebase SDK -->
+<script type="module">
+/* ══════════════════════════════════════════════════════════════
+   ★★★  Firebase 설정값을 아래에 붙여넣으세요  ★★★
+   Firebase Console → 프로젝트 설정 → 내 앱 → 웹앱 → firebaseConfig
+══════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCQYVxnTv5TI7xmzKUOz6koas1kJhKVadY",
+  authDomain:        "g2bl-cd6e5.firebaseapp.com",
+  databaseURL:       "https://g2bl-cd6e5-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "g2bl-cd6e5",
+  storageBucket:     "g2bl-cd6e5.firebasestorage.app",
+  messagingSenderId: "651311414275",
+  appId:             "1:651311414275:web:1b6474a71a25acee9f6236"
+};
+/* ══════════════════════════════════════════════════════════════ */
+
+import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, get, remove, child, onValue }
+                                                from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const _fbApp = initializeApp(FIREBASE_CONFIG);
+const _db    = getDatabase(_fbApp);
+
+/* ── Firebase ↔ 앱 브릿지 (전역 노출) ── */
+window._fbReady = false;
+window._fbDB    = _db;
+window._fbRef   = ref;
+window._fbSet   = set;
+window._fbGet   = get;
+window._fbChild = child;
+window._fbRemove = remove;
+window._fbOnValue = onValue;
+
+/* 연결 상태 표시 */
+import { getDatabase as gdb2, ref as ref2, onValue as ov2 }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+const connRef = ref2(_db, '.info/connected');
+ov2(connRef, snap => {
+  const online = snap.val() === true;
+  window._fbReady = online;
+  const dot = document.getElementById('fbStatusDot');
+  const lbl = document.getElementById('fbStatusLbl');
+  if (dot) dot.style.background = online ? '#22c55e' : '#ef4444';
+  if (lbl) lbl.textContent = online ? '서버 연결됨' : '오프라인';
+});
+
+console.log('[Firebase] 초기화 완료');
+</script>
 <style>
 :root{
   --bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--surface3:#21273a;
@@ -401,7 +451,7 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
       <span class="sidebar-item-text">홈으로</span>
     </button>
   </div>
-  <div class="sidebar-version">사무동 시설관리 v1.0</div>
+  <div class="sidebar-version">사무동 시설관리 v2.0 · Firebase 공유 버전</div>
 </div>
 <!-- HOME SCREEN -->
 <div id="homeScreen" style="display:flex">
@@ -423,9 +473,14 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
         <div class="logo-text" id="headerTitle">시설관리</div>
         
       </div>
-      <div style="text-align:right;flex:0 0 auto;margin-right:10px">
+      <div style="text-align:right;flex:0 0 auto;margin-right:6px">
         <div class="clock-time" id="clockDisplay"></div>
         <div class="clock-date" id="dateDisplay"></div>
+        <!-- 서버 연결 상태 -->
+        <div style="display:inline-flex;align-items:center;gap:4px;margin-top:2px">
+          <div id="fbStatusDot" style="width:6px;height:6px;border-radius:50%;background:#ef4444;flex:0 0 auto;transition:background .3s"></div>
+          <span id="fbStatusLbl" style="font-size:9px;color:var(--text3);font-weight:700">연결중...</span>
+        </div>
       </div>
       <button class="menu-btn" onclick="openSidebar()" style="font-size:20px">≡</button>
     </div>
@@ -539,10 +594,11 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
         <div class="master-box"><div class="master-head">📞 접수자</div><div class="action-row" style="margin-bottom:6px"><select class="sel" id="receiverDomainInput" style="flex:0 0 96px;padding:8px 10px;font-size:13px"><option value="arch">건축</option><option value="mech">기계</option><option value="elec">전기</option><option value="gen">일반</option></select><input class="inp" id="receiverInput" placeholder="접수자 이름" style="flex:1"><button class="btn sm primary" id="addReceiverBtn">추가</button></div><div class="master-list" id="receiverList"></div></div>
       </div>
     </div>
-    <div class="panel" style="display:flex;gap:8px">
+    <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" style="flex:1" id="backupBtn">💾 데이터 백업</button>
       <label class="btn ghost" for="restoreFile" style="flex:1;cursor:pointer;text-align:center">📂 복원</label>
       <input type="file" id="restoreFile" accept=".json" style="display:none">
+      <button class="btn" style="flex:1 0 100%;background:rgba(34,197,94,.12);color:var(--ok);border-color:rgba(34,197,94,.3);font-weight:800" onclick="loadState().then(()=>showToast('✅ 서버에서 최신 데이터를 불러왔습니다'))">🔄 서버 새로고침</button>
     </div>
   </div>
 </section>
@@ -635,16 +691,57 @@ function clearDraft(schedId){
   delete draftStore[schedId];
 }
 
-/* ════ DB ════ */
-const openDB=()=>new Promise((res,rej)=>{
-  const r=indexedDB.open(DB_NAME,DB_VER);
-  r.onupgradeneeded=()=>{const db=r.result;Object.values(STORES).forEach(n=>{if(!db.objectStoreNames.contains(n))db.createObjectStore(n,{keyPath:'id'})})};
-  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
-});
-const dbAll=async s=>{const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction(s,'readonly');const r=t.objectStore(s).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})};
-const dbPut=async(s,item)=>{const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(item);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})};
-const dbDel=async(s,id)=>{const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).delete(id);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})};
-const dbClear=async s=>{const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).clear();t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})};
+/* ════ DB (Firebase Realtime Database) ════
+   IndexedDB 대신 Firebase를 사용합니다.
+   dbAll / dbPut / dbDel / dbClear 인터페이스는 동일하게 유지.
+══════════════════════════════════════════ */
+
+function _fbdb(){return window._fbDB;}
+function _ref(path){return window._fbRef(_fbdb(), path);}
+
+/** 스토어(컬렉션) 전체 읽기 → 배열 반환 */
+const dbAll = async (store) => {
+  const snap = await window._fbGet(_ref(store));
+  if(!snap.exists()) return [];
+  const val = snap.val();
+  // Firebase는 객체로 저장됨 → 배열로 변환
+  return Object.values(val);
+};
+
+/** 아이템 저장(추가 또는 수정) */
+const dbPut = async (store, item) => {
+  if(!item || !item.id) throw new Error('id 없음');
+  await window._fbSet(_ref(store + '/' + item.id), item);
+};
+
+/** 아이템 삭제 */
+const dbDel = async (store, id) => {
+  await window._fbRemove(_ref(store + '/' + id));
+};
+
+/** 스토어 전체 삭제 */
+const dbClear = async (store) => {
+  await window._fbRemove(_ref(store));
+};
+
+/* ── 실시간 동기화: 다른 사용자가 데이터를 변경하면 자동 갱신 ── */
+let _realtimeListeners = [];
+function startRealtimeSync(){
+  // 기존 리스너 제거
+  _realtimeListeners.forEach(unsub => unsub && unsub());
+  _realtimeListeners = [];
+
+  // 모든 스토어 감시
+  Object.values(STORES).forEach(store => {
+    const r = _ref(store);
+    const unsub = window._fbOnValue(r, () => {
+      // 다른 기기에서 데이터 변경 시 자동 로드
+      if(window._realtimeSyncEnabled) loadState();
+    });
+    _realtimeListeners.push(unsub);
+  });
+}
+window._realtimeSyncEnabled = false; // init 후 true로 설정
 
 /* ════ HELPERS ════ */
 const uid=()=>Date.now()+'-'+Math.random().toString(36).slice(2,7);
@@ -2511,7 +2608,24 @@ function bindEvents(){
   window.addEventListener('resize',setHeaderH);
   window.addEventListener('scroll',setHeaderH);
   moveMain(0);
+
+  // Firebase SDK 로딩 대기 (module script는 비동기)
+  let waitCount = 0;
+  while(!window._fbDB && waitCount < 30) {
+    await new Promise(r => setTimeout(r, 200));
+    waitCount++;
+  }
+  if(!window._fbDB) {
+    alert('Firebase 연결 실패!\n\n수정.html 상단의 FIREBASE_CONFIG에\n설정값을 올바르게 입력했는지 확인하세요.');
+    return;
+  }
+
   await loadState(); // 데이터 로딩 완료 후 renderAll() 내부에서 화면 렌더링
+
+  // 실시간 동기화 시작 (초기 로드 후에 활성화)
+  window._realtimeSyncEnabled = true;
+  startRealtimeSync();
+  console.log('[Firebase] 실시간 동기화 시작');
 })();
 
 </script>
