@@ -29,7 +29,10 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
 .app{position:fixed;inset:0;display:flex;flex-direction:column;max-width:780px;margin:0 auto}
 
 /* ── 헤더 ── */
-.header{flex:0 0 auto;padding:env(safe-area-inset-top) 0 0;background:#111827;border-bottom:1px solid var(--border)}
+.header{flex:0 0 auto;padding:env(safe-area-inset-top, 0px) 0 0;background:#111827;border-bottom:1px solid var(--border)}
+@supports not (padding-top: env(safe-area-inset-top)){
+  .header{padding-top:0}
+}
 .header-inner{padding:12px 16px 10px}
 .header-top{display:flex;align-items:center;gap:12px}
 .logo-text{font-size:26px;font-weight:900;letter-spacing:-1px;flex:1;line-height:1}
@@ -2499,10 +2502,14 @@ function bindEvents(){
   // 헤더 높이를 CSS 변수로 설정 → homeScreen top 자동 계산
   function setHeaderH(){
     const h=document.querySelector('.header');
-    if(h)document.getElementById('homeScreen').style.top=h.offsetHeight+'px';
+    if(h){
+      const rect=h.getBoundingClientRect();
+      document.getElementById('homeScreen').style.top=rect.bottom+'px';
+    }
   }
   setHeaderH();
   window.addEventListener('resize',setHeaderH);
+  window.addEventListener('scroll',setHeaderH);
   moveMain(0);
   await loadState(); // 데이터 로딩 완료 후 renderAll() 내부에서 화면 렌더링
 })();
