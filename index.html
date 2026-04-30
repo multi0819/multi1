@@ -1453,6 +1453,11 @@ window.generateDayReport=async function(dateStr){
 
 
   <\/script>
+  <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js');
+}
+</script>
   </body></html>`;
 
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
