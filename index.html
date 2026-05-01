@@ -140,8 +140,8 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
 
 /* ── Views / Track ── */
 .views{flex:1;position:relative;overflow:hidden}
-.track{display:flex;width:600%;height:100%;transition:transform .28s cubic-bezier(.4,0,.2,1)}
-.screen{width:16.6667%;height:100%;overflow-y:auto;padding:10px 12px 96px}
+.track{display:flex;width:700%;height:100%;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.screen{width:14.2857%;height:100%;overflow-y:auto;padding:10px 12px 96px}
 
 /* ── 사이드바 ── */
 .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);z-index:150;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -449,6 +449,10 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
       <span class="si-icon">👷</span>
       <span class="sidebar-item-text">근무현황</span>
     </button>
+    <button class="sidebar-item" data-main="6" onclick="navTo(this)">
+      <span class="si-icon">🧊</span>
+      <span class="sidebar-item-text">냉동기 점검일지</span>
+    </button>
     <div class="sidebar-divider"></div>
     <button class="sidebar-item" onclick="goHome();closeSidebar()">
       <span class="si-icon">🏠</span>
@@ -648,6 +652,294 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
   </div>
 </section>
 
+
+<!-- ▶ S6: 냉동기 점검일지 -->
+<section class="screen" id="chillerScreen" style="padding:10px 8px 96px;background:var(--bg)">
+<div style="display:flex;flex-direction:column;gap:10px">
+
+  <!-- 업로드 UI -->
+  <div style="background:#0a1020;border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:15px;font-weight:900;color:#ccd8ff">🧊 냉동기 점검일지 자동 작성</div>
+    <div style="font-size:11px;color:#667799">터보냉동기 제어판 사진 2장 → AI 분석 → 자동 기입 → 인쇄</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div id="chBox1" style="flex:1;min-width:100px;border:2px dashed #223355;border-radius:10px;padding:10px 8px;text-align:center;background:#060e1c;cursor:pointer;position:relative;transition:border-color .2s">
+        <input type="file" accept="image/*" onchange="chPrev(1,this)" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+        <div style="font-size:20px">📷</div>
+        <div id="chLbl1" style="color:#6677aa;font-weight:700;font-size:10px;margin-top:2px">1회차</div>
+        <div style="color:#334466;font-size:9px">오전</div>
+        <img id="chTh1" style="width:100%;max-height:55px;object-fit:cover;border-radius:5px;margin-top:4px;display:none">
+      </div>
+      <div id="chBox2" style="flex:1;min-width:100px;border:2px dashed #223355;border-radius:10px;padding:10px 8px;text-align:center;background:#060e1c;cursor:pointer;position:relative;transition:border-color .2s">
+        <input type="file" accept="image/*" onchange="chPrev(2,this)" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+        <div style="font-size:20px">📷</div>
+        <div id="chLbl2" style="color:#6677aa;font-weight:700;font-size:10px;margin-top:2px">2회차</div>
+        <div style="color:#334466;font-size:9px">오후</div>
+        <img id="chTh2" style="width:100%;max-height:55px;object-fit:cover;border-radius:5px;margin-top:4px;display:none">
+      </div>
+      <button id="chAiBtn" onclick="chAnalyze()" disabled style="background:linear-gradient(135deg,#1a3daa,#2255ee);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;opacity:.4">⚡ AI 자동 분석</button>
+      <button id="chPrtBtn" onclick="chPrint()" style="background:linear-gradient(135deg,#113322,#1a6633);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;display:none">🖨 인쇄</button>
+    </div>
+    <div id="chBar" style="display:none;border-radius:7px;padding:6px 10px;font-size:10px;border:1px solid #2a3a5a;color:#8899bb;background:#060e1c"></div>
+  </div>
+
+  <!-- A4 점검일지 -->
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px"><div id="chillerDoc" style="background:#fff;color:#000;min-width:700px;font-family:'Malgun Gothic','맑은 고딕',dotum,sans-serif">
+  <div style="padding:4mm 4mm 4mm 5mm">
+
+    <div style="text-align:center;font-size:15px;font-weight:900;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:4px">흡수식 / 터보 냉동기 점검일지</div>
+
+    <!-- 상단 메타 -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;font-size:9px">
+      <div style="flex:1;line-height:2">
+        <span style="font-weight:700">2026 년&nbsp;</span>
+        <span style="font-weight:700">월</span><span id="chM" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
+        <span style="font-weight:700">일</span><span id="chD" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
+        <span style="font-weight:700">요일</span><span id="chW" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
+        <span style="font-weight:700">날씨:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:28px;margin-right:5px"></span>
+        <span style="font-weight:700">최고온도:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:22px;margin-right:2px">℃</span>
+        <span style="font-weight:700">최저온도:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:22px;margin-right:5px">℃</span>
+        <br><span style="font-weight:700">근무자:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:80px"></span>
+      </div>
+      <table style="border-collapse:collapse;font-size:8px;flex-shrink:0;margin-left:4px">
+        <tr>
+          <th style="border:1px solid #000;background:#eee;padding:1px 5px">담당</th>
+          <th style="border:1px solid #000;background:#eee;padding:1px 5px">팀장</th>
+          <th style="border:1px solid #000;background:#eee;padding:1px 5px">부장</th>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000;height:18px;width:26px"></td>
+          <td style="border:1px solid #000;width:26px"></td>
+          <td style="border:1px solid #000;width:26px"></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- I. 흡수식 -->
+    <div style="margin-bottom:3px">
+      <div style="background:#000;color:#fff;font-size:10px;font-weight:900;padding:2px 5px;margin-bottom:0">I . 흡수식 냉동기</div>
+      <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;width:100%;font-size:6.5px;table-layout:fixed">
+        <colgroup>
+          <col style="width:9px"><col style="width:28px">
+          <col style="width:13px"><col style="width:13px"><col style="width:13px">
+          <col style="width:13px"><col style="width:13px">
+          <col style="width:14px"><col style="width:14px"><col style="width:14px">
+          <col style="width:14px"><col style="width:14px"><col style="width:14px">
+          <col style="width:11px"><col style="width:11px"><col style="width:11px"><col style="width:11px">
+          <col style="width:11px"><col style="width:11px">
+          <col style="width:11px"><col style="width:11px">
+          <col style="width:11px"><col style="width:11px"><col style="width:11px">
+          <col style="width:11px"><col style="width:11px"><col style="width:12px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;vertical-align:middle;font-size:6px">구<br>분</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;position:relative;height:34px">
+              <svg style="position:absolute;top:0;left:0;width:100%;height:100%"><line x1="0" y1="0" x2="100%" y2="100%" stroke="#000" stroke-width="0.8"/></svg>
+              <span style="position:absolute;top:1px;right:2px;font-size:5.5px;font-weight:700">구분</span>
+              <span style="position:absolute;bottom:1px;left:2px;font-size:5.5px;font-weight:700">시간</span>
+            </th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수온도(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수<br>설정값<br>(℃)</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉각수온도(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">배기<br>가스<br>출구<br>(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">증발기<br>냉매<br>온도<br>(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">응축기<br>냉매<br>온도<br>(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">고온<br>재생기<br>온도<br>(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">저온<br>재생기<br>온도<br>(℃)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">흡수기<br>출구<br>온도<br>(℃)</th>
+            <th colspan="4" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">기스압력(kPa)</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수펌프</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉각수펌프</th>
+            <th colspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수헤더압력(Kg/㎠)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">희액<br>농도<br>(%)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">농액<br>농도<br>(%)</th>
+            <th rowspan="3" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">비고</th>
+          </tr>
+          <tr>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">입구</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">출구</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">입구</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">출구</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">1차</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">2차</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">공급</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">환수</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">공급</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">환수</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">공급</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">환수</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">차압</th>
+          </tr>
+          <tr>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">고압</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">저압</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">고압</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">저압</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="3" style="border:1px solid #000;text-align:center;vertical-align:middle;font-size:6px">1</td>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+            <td rowspan="3" style="border:1px solid #000"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+          </tr>
+          <tr>
+            <td rowspan="3" style="border:1px solid #000;text-align:center;vertical-align:middle;font-size:6px">2</td>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+            <td rowspan="3" style="border:1px solid #000"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px">:</td>
+            <td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td><td style="border:1px solid #000;height:11px"></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- II. 터보 -->
+    <div style="margin-bottom:3px">
+      <div style="background:#000;color:#fff;font-size:10px;font-weight:900;padding:2px 5px;margin-bottom:0">II . 터보 냉동기</div>
+      <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;width:100%;font-size:6.5px;table-layout:fixed">
+        <colgroup>
+          <col style="width:9px"><col style="width:28px">
+          <col style="width:15px"><col style="width:15px"><col style="width:15px">
+          <col style="width:15px"><col style="width:15px">
+          <col style="width:15px"><col style="width:16px"><col style="width:16px">
+          <col style="width:17px"><col style="width:15px">
+          <col style="width:17px"><col style="width:15px">
+          <col style="width:15px"><col style="width:17px">
+          <col style="width:12px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;vertical-align:middle;font-size:6px">구<br>분</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;position:relative;height:28px">
+              <svg style="position:absolute;top:0;left:0;width:100%;height:100%"><line x1="0" y1="0" x2="100%" y2="100%" stroke="#000" stroke-width="0.8"/></svg>
+              <span style="position:absolute;top:1px;right:2px;font-size:5.5px;font-weight:700">구분</span>
+              <span style="position:absolute;bottom:1px;left:2px;font-size:5.5px;font-weight:700">시간</span>
+            </th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수온도(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉수<br>설정값<br>(℃)</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">냉각수온도(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">압축기<br>토출<br>온도(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">모터<br>전부하<br>전류(%)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">전류제한<br>설정값(%)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">응축기<br>압력<br>(kPaG)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">응축기<br>포화(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">증발기<br>압력<br>(kPaG)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">증발기<br>포화(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">오일섬프<br>온도(℃)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">오일압력<br>(kPaD)</th>
+            <th rowspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">비고</th>
+          </tr>
+          <tr>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">인입</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">출구</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">인입</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;font-size:6px">출구</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="3" style="border:1px solid #000;text-align:center;vertical-align:middle;font-size:6px">1</td>
+            <td id="ch_r1_time" style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
+            <td id="ch_r1_cw_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cw_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cw_set" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cd_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cd_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_dis" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_motor" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_limit" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cond_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cond_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_evap_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_evap_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_oil_t" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_oil_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td rowspan="3" style="border:1px solid #000"></td>
+          </tr>
+          <tr>
+            <td id="ch_r2_time" style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
+            <td id="ch_r2_cw_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cw_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cw_set" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cd_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cd_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_dis" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_motor" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_limit" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cond_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cond_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_evap_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_evap_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_oil_t" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_oil_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px">:</td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+            <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- III. 하단: 운전시간 + 특이사항 -->
+    <div style="display:flex;border:1px solid #000">
+      <div style="width:50%;border-right:1px solid #000">
+        <div style="background:#000;color:#fff;font-size:10px;font-weight:900;padding:2px 5px">III . 냉동기 운전시간</div>
+        <table style="border-collapse:collapse;width:100%;font-size:7px">
+          <tr>
+            <th style="border:1px solid #000;border-left:none;background:#f2f2f2;text-align:center;padding:2px" rowspan="2">구분</th>
+            <th colspan="2" style="border:1px solid #000;background:#f2f2f2;text-align:center;padding:2px">흡수식 냉동기</th>
+            <th style="border:1px solid #000;border-right:none;background:#f2f2f2;text-align:center;padding:2px">터보냉동기</th>
+          </tr>
+          <tr>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;padding:2px">1호기</th>
+            <th style="border:1px solid #000;background:#f2f2f2;text-align:center;padding:2px">2호기</th>
+            <th style="border:1px solid #000;border-right:none;background:#f2f2f2;text-align:center;padding:2px">1호기</th>
+          </tr>
+          <tr><th style="border:1px solid #000;border-left:none;background:#f2f2f2;padding:2px">가동시간</th><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;border-right:none;text-align:center;padding:2px">:</td></tr>
+          <tr><th style="border:1px solid #000;border-left:none;background:#f2f2f2;padding:2px">정지시간</th><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;border-right:none;text-align:center;padding:2px">:</td></tr>
+          <tr><th style="border:1px solid #000;border-left:none;background:#f2f2f2;padding:2px">일 누계</th><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;border-right:none;text-align:center;padding:2px">:</td></tr>
+          <tr><th style="border:1px solid #000;border-left:none;background:#f2f2f2;padding:2px">월 누계</th><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;text-align:center;padding:2px">:</td><td style="border:1px solid #000;border-right:none;text-align:center;padding:2px">:</td></tr>
+        </table>
+      </div>
+      <div style="width:50%;display:flex;flex-direction:column">
+        <div style="background:#000;color:#fff;font-size:10px;font-weight:900;padding:2px 5px">■ 특이사항</div>
+        <div id="ch_note" style="flex:1;padding:4px 6px;font-size:9px;min-height:60px"></div>
+      </div>
+    </div>
+
+  </div><!-- /padding -->
+  </div></div><!-- /chillerDoc -->
+
+</div>
+</section>
 </div></div><!-- /track /views -->
 </div></div>
 <!-- 처리 모달 -->
@@ -1051,7 +1343,7 @@ window.navTo=function(btn){
     history.pushState({screen:1},'',location.href);
   } else {
     moveMain(+main+1);
-    const titles={1:'작업허가',2:'일일점검',3:'통계',4:'기준정보',5:'근무현황'};
+    const titles={1:'작업허가',2:'일일점검',3:'통계',4:'기준정보',5:'근무현황',6:'냉동기 점검일지'};
     document.getElementById('headerTitle').textContent=titles[+main]||'시설관리';
     const hs3=document.getElementById('headerSub');if(hs3)hs3.textContent='';
     setBackBtn(true);
@@ -1064,7 +1356,7 @@ window.navTo=function(btn){
 window.navDirect=function(main){
   closeSidebar();
   moveMain(main+1);
-  const titles={1:'작업허가',2:'일일점검',3:'통계',4:'기준정보',5:'근무현황'};
+  const titles={1:'작업허가',2:'일일점검',3:'통계',4:'기준정보',5:'근무현황',6:'냉동기 점검일지'};
   document.getElementById('headerTitle').textContent=titles[main]||'시설관리';
   setBackBtn(true);
   history.pushState({screen:main+1},'',location.href);
@@ -1082,7 +1374,7 @@ function moveMain(i){
     if(bb)bb.style.display='none';
   } else {
     if(hs)hs.style.display='none';
-    document.getElementById('track').style.transform='translateX(-'+((i-1)*16.6667).toFixed(4)+'%)';
+    document.getElementById('track').style.transform='translateX(-'+((i-1)*14.2857).toFixed(4)+'%)';
     if(bb)bb.style.display='flex';
   }
 }
@@ -3295,6 +3587,110 @@ window.removeStaffMember=async function(id){
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./service-worker.js');
 }
+
+/* ════ 냉동기 점검일지 ════ */
+(function(){
+  const d=new Date(),w=['일','월','화','수','목','금','토'];
+  const mEl=document.getElementById('chM');
+  const dEl=document.getElementById('chD');
+  const wEl=document.getElementById('chW');
+  if(mEl)mEl.textContent=d.getMonth()+1;
+  if(dEl)dEl.textContent=d.getDate();
+  if(wEl)wEl.textContent=w[d.getDay()];
+})();
+
+const chImgs={1:null,2:null};
+
+window.chPrev=function(n,inp){
+  const f=inp.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    chImgs[n]=e.target.result;
+    const th=document.getElementById('chTh'+n);
+    if(th){th.src=e.target.result;th.style.display='block';}
+    const box=document.getElementById('chBox'+n);
+    if(box){box.style.borderColor='#2255ee';box.style.borderStyle='solid';}
+    const lbl=document.getElementById('chLbl'+n);
+    if(lbl)lbl.textContent=(n==1?'1회차':'2회차')+' ✓';
+    const btn=document.getElementById('chAiBtn');
+    if(btn){btn.disabled=!(chImgs[1]&&chImgs[2]);btn.style.opacity=btn.disabled?'0.4':'1';}
+  };
+  r.readAsDataURL(f);
+};
+
+window.chAnalyze=async function(){
+  const ab=document.getElementById('chAiBtn');
+  const bar=document.getElementById('chBar');
+  if(!ab||!bar)return;
+  ab.disabled=true; ab.textContent='⏳ 분석 중...'; ab.style.opacity='0.6';
+  bar.style.display='block'; bar.textContent='🔍 수치 인식 중...';
+
+  const prompt=`두 장의 터보냉동기 제어 화면 사진입니다.
+첫 번째=1회차, 두 번째=2회차.
+JSON만 응답. 단위 없이 숫자만. 시간은 HH:MM.
+{"r1":{"time":"HH:MM","cw_in":"냉수인입","cw_out":"냉수출구","cw_set":"냉수설정값","cd_in":"냉각수인입","cd_out":"냉각수출구","discharge":"압축기토출","motor_pct":"모터전부하%","limit_pct":"전류제한%","cond_p":"응축기압력kPaG","cond_sat":"응축기포화","evap_p":"증발기압력kPaG","evap_sat":"증발기포화","oil_t":"오일섬프온도","oil_p":"오일압력kPaD"},"r2":{동일구조}}`;
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",max_tokens:1000,
+        messages:[{role:"user",content:[
+          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:chImgs[1].split(',')[1]}},
+          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:chImgs[2].split(',')[1]}},
+          {type:"text",text:prompt}
+        ]}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content.map(i=>i.text||'').join('');
+    const p=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    chFill(p);
+    bar.style.borderColor='#115533'; bar.style.color='#22bb66';
+    bar.textContent='✅ 자동 기입 완료!';
+    const pb=document.getElementById('chPrtBtn');
+    if(pb)pb.style.display='block';
+    ab.textContent='✅ 완료';
+  }catch(e){
+    bar.style.borderColor='#441111'; bar.style.color='#ee4444';
+    bar.textContent='❌ 오류: '+e.message;
+    ab.disabled=false; ab.textContent='⚡ AI 자동 분석'; ab.style.opacity='1';
+  }
+};
+
+function chSet(id,val){
+  const el=document.getElementById(id);
+  if(!el||val==null||val==='')return;
+  el.textContent=val;
+  el.style.background='#edf2ff'; el.style.color='#0d2299'; el.style.fontWeight='700';
+}
+
+function chFill(d){
+  const r1=d.r1||{},r2=d.r2||{};
+  chSet('ch_r1_time',r1.time); chSet('ch_r1_cw_in',r1.cw_in); chSet('ch_r1_cw_out',r1.cw_out);
+  chSet('ch_r1_cw_set',r1.cw_set); chSet('ch_r1_cd_in',r1.cd_in); chSet('ch_r1_cd_out',r1.cd_out);
+  chSet('ch_r1_dis',r1.discharge); chSet('ch_r1_motor',r1.motor_pct); chSet('ch_r1_limit',r1.limit_pct);
+  chSet('ch_r1_cond_p',r1.cond_p); chSet('ch_r1_cond_sat',r1.cond_sat);
+  chSet('ch_r1_evap_p',r1.evap_p); chSet('ch_r1_evap_sat',r1.evap_sat);
+  chSet('ch_r1_oil_t',r1.oil_t); chSet('ch_r1_oil_p',r1.oil_p);
+
+  chSet('ch_r2_time',r2.time); chSet('ch_r2_cw_in',r2.cw_in); chSet('ch_r2_cw_out',r2.cw_out);
+  chSet('ch_r2_cw_set',r2.cw_set); chSet('ch_r2_cd_in',r2.cd_in); chSet('ch_r2_cd_out',r2.cd_out);
+  chSet('ch_r2_dis',r2.discharge); chSet('ch_r2_motor',r2.motor_pct); chSet('ch_r2_limit',r2.limit_pct);
+  chSet('ch_r2_cond_p',r2.cond_p); chSet('ch_r2_cond_sat',r2.cond_sat);
+  chSet('ch_r2_evap_p',r2.evap_p); chSet('ch_r2_evap_sat',r2.evap_sat);
+  chSet('ch_r2_oil_t',r2.oil_t); chSet('ch_r2_oil_p',r2.oil_p);
+}
+
+window.chPrint=function(){
+  const doc=document.getElementById('chillerDoc');
+  if(!doc)return;
+  const w=window.open('','_blank');
+  w.document.write('<html><head><style>@page{size:A4;margin:0}body{margin:0;padding:0}*{box-sizing:border-box}</style></head><body>'+doc.innerHTML+'</body></html>');
+  w.document.close();
+  w.print();
+};
 </script>
 </body>
         </html>
