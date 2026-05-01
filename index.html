@@ -3625,26 +3625,31 @@ window.chAnalyze=async function(){
   ab.disabled=true; ab.textContent='⏳ 분석 중...'; ab.style.opacity='0.6';
   bar.style.display='block'; bar.textContent='🔍 수치 인식 중...';
 
+  // ★ Google AI Studio에서 무료 발급: aistudio.google.com
+  const GEMINI_API_KEY = 'AIzaSyCn77maZjyrVdXzUxJtdp5dTo1ATQ1S1_g';
+
   const prompt=`두 장의 터보냉동기 제어 화면 사진입니다.
 첫 번째=1회차, 두 번째=2회차.
-JSON만 응답. 단위 없이 숫자만. 시간은 HH:MM.
+JSON만 응답. 다른 텍스트 없이 JSON만. 단위 없이 숫자만. 시간은 HH:MM.
 {"r1":{"time":"HH:MM","cw_in":"냉수인입","cw_out":"냉수출구","cw_set":"냉수설정값","cd_in":"냉각수인입","cd_out":"냉각수출구","discharge":"압축기토출","motor_pct":"모터전부하%","limit_pct":"전류제한%","cond_p":"응축기압력kPaG","cond_sat":"응축기포화","evap_p":"증발기압력kPaG","evap_sat":"증발기포화","oil_t":"오일섬프온도","oil_p":"오일압력kPaD"},"r2":{동일구조}}`;
 
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
+    const toBase64=(dataUrl)=>dataUrl.split(',')[1];
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",max_tokens:1000,
-        messages:[{role:"user",content:[
-          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:chImgs[1].split(',')[1]}},
-          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:chImgs[2].split(',')[1]}},
-          {type:"text",text:prompt}
-        ]}]
+        contents:[{parts:[
+          {inline_data:{mime_type:"image/jpeg",data:toBase64(chImgs[1])}},
+          {inline_data:{mime_type:"image/jpeg",data:toBase64(chImgs[2])}},
+          {text:prompt}
+        ]}],
+        generationConfig:{temperature:0,maxOutputTokens:1000}
       })
     });
     const data=await res.json();
-    const raw=data.content.map(i=>i.text||'').join('');
+    if(data.error) throw new Error(data.error.message);
+    const raw=data.candidates[0].content.parts[0].text;
     const p=JSON.parse(raw.replace(/```json|```/g,'').trim());
     chFill(p);
     bar.style.borderColor='#115533'; bar.style.color='#22bb66';
