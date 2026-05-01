@@ -3635,7 +3635,7 @@ JSON만 응답. 다른 텍스트 없이 JSON만. 단위 없이 숫자만. 시간
 
   try{
     const toBase64=(dataUrl)=>dataUrl.split(',')[1];
-    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
