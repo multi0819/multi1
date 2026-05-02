@@ -3709,47 +3709,36 @@ window.chPrint=function(){
   const doc=document.getElementById('chillerDoc');
   if(!doc)return;
   const btn=document.getElementById('chPrtBtn');
-  if(btn){btn.textContent='⏳ 생성중...';btn.disabled=true;}
+  if(btn){btn.textContent='⏳ PDF 생성중...';btn.disabled=true;}
 
-  // html2canvas로 이미지 변환 후 PDF 저장
-  function doCapture(){
-    html2canvas(doc,{
-      scale:2,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:'#ffffff',
-      width:doc.scrollWidth,
-      height:doc.scrollHeight
-    }).then(function(canvas){
-      // jsPDF A4 가로
-      var pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-      var pageW=297,pageH=210;
-      var imgW=canvas.width,imgH=canvas.height;
-      var ratio=Math.min(pageW/imgW*3.7795,pageH/imgH*3.7795);
-      var drawW=imgW*ratio/3.7795,drawH=imgH*ratio/3.7795;
-      var x=(pageW-drawW)/2,y=(pageH-drawH)/2;
-      var imgData=canvas.toDataURL('image/jpeg',0.95);
-      pdf.addImage(imgData,'JPEG',x,y,drawW,drawH);
-      pdf.save('냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf');
-      if(btn){btn.textContent='🖨 인쇄';btn.disabled=false;}
-    }).catch(function(e){
-      alert('PDF 생성 실패: '+e.message);
-      if(btn){btn.textContent='🖨 인쇄';btn.disabled=false;}
-    });
+  function loadScript(src,cb){
+    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
+    var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
   }
 
-  // 라이브러리 로드
-  if(window.html2canvas && window.jspdf){
-    doCapture();
-  } else {
-    var s1=document.createElement('script');
-    s1.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s1.onload=function(){
-      var s2=document.createElement('script');
-      s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      s2.onload=doCapture;
-      document.head.appendChild(s2);
-    };
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
+      html2canvas(doc,{
+        scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',
+        width:doc.scrollWidth,height:doc.scrollHeight,
+        scrollX:0,scrollY:0
+      }).then(function(canvas){
+        var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+        var pw=297,ph=210;
+        var cw=canvas.width/2,ch=canvas.height/2; // scale=2이므로 실제크기로 환산
+        var ratio=Math.min(pw/cw,ph/ch);
+        var dw=cw*ratio,dh=ch*ratio;
+        var ox=(pw-dw)/2,oy=(ph-dh)/2;
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',ox,oy,dw,dh);
+        pdf.save('냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf');
+        if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
+      }).catch(function(e){
+        alert('PDF 생성 실패: '+e.message);
+        if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
+      });
+    });
+  });
+};
     document.head.appendChild(s1);
   }
 };
