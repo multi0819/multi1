@@ -654,7 +654,7 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
 
 
 <!-- ▶ S6: 냉동기 점검일지 -->
-<section class="screen" id="chillerScreen" style="padding:10px 8px 96px;background:var(--bg)">
+<section class="screen" id="chillerScreen" style="padding:10px 8px 20px;background:var(--bg)">
 <div style="display:flex;flex-direction:column;gap:10px">
 
   <!-- 업로드 UI -->
@@ -684,35 +684,36 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
 
   <!-- A4 점검일지 -->
   <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px"><div id="chillerDoc" style="background:#fff;color:#000;min-width:700px;font-family:'Malgun Gothic','맑은 고딕',dotum,sans-serif">
-  <div style="padding:4mm 4mm 4mm 5mm">
+  <div style="padding:4mm 4mm 2mm 5mm">
 
     <div style="text-align:center;font-size:15px;font-weight:900;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:4px">흡수식 / 터보 냉동기 점검일지</div>
 
     <!-- 상단 메타 -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;font-size:9px">
       <div style="flex:1;line-height:2">
-        <span style="font-weight:700">2026 년&nbsp;</span>
-        <span style="font-weight:700">월</span><span id="chM" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
-        <span style="font-weight:700">일</span><span id="chD" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
-        <span style="font-weight:700">요일</span><span id="chW" style="border-bottom:1px solid #000;display:inline-block;min-width:20px;margin-right:5px"></span>
-        <span style="font-weight:700">날씨:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:28px;margin-right:5px"></span>
-        <span style="font-weight:700">최고온도:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:22px;margin-right:2px">℃</span>
-        <span style="font-weight:700">최저온도:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:22px;margin-right:5px">℃</span>
-        <br><span style="font-weight:700">근무자:</span><span style="border-bottom:1px solid #000;display:inline-block;min-width:80px"></span>
+        <span style="font-weight:700">2026년 </span>
+        <span id="chM" style="font-weight:700"></span><span style="font-weight:700">월 </span>
+        <span id="chD" style="font-weight:700"></span><span style="font-weight:700">일 </span>
+        <span id="chW" style="font-weight:700"></span><span style="font-weight:700">요일&nbsp;&nbsp;</span>
+        <span style="font-weight:700">날씨:</span><span style="display:inline-block;min-width:28px;margin-right:8px">&nbsp;</span>
+        <span style="font-weight:700">최고온도:</span><span style="display:inline-block;min-width:22px;margin-right:1px">&nbsp;</span><span style="font-weight:700">℃&nbsp;&nbsp;</span>
+        <span style="font-weight:700">최저온도:</span><span style="display:inline-block;min-width:22px;margin-right:1px">&nbsp;</span><span style="font-weight:700">℃&nbsp;&nbsp;</span>
+        <span style="font-weight:700">근무자:</span><span style="display:inline-block;min-width:80px">&nbsp;</span>
       </div>
-      <table style="border-collapse:collapse;font-size:8px;flex-shrink:0;margin-left:4px">
+      <table style="border-collapse:collapse;font-size:9px;flex-shrink:0;margin-left:4px">
         <tr>
-          <th style="border:1px solid #000;background:#eee;padding:1px 5px">담당</th>
-          <th style="border:1px solid #000;background:#eee;padding:1px 5px">팀장</th>
-          <th style="border:1px solid #000;background:#eee;padding:1px 5px">부장</th>
+          <th style="border:1px solid #000;background:#eee;padding:2px 10px">담당</th>
+          <th style="border:1px solid #000;background:#eee;padding:2px 10px">팀장</th>
+          <th style="border:1px solid #000;background:#eee;padding:2px 10px">부장</th>
         </tr>
         <tr>
-          <td style="border:1px solid #000;height:18px;width:26px"></td>
-          <td style="border:1px solid #000;width:26px"></td>
-          <td style="border:1px solid #000;width:26px"></td>
+          <td style="border:1px solid #000;height:28px;width:44px"></td>
+          <td style="border:1px solid #000;width:44px"></td>
+          <td style="border:1px solid #000;width:44px"></td>
         </tr>
       </table>
     </div>
+
 
     <!-- I. 흡수식 -->
     <div style="margin-bottom:3px">
@@ -859,42 +860,42 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
         <tbody>
           <tr>
             <td rowspan="3" style="border:1px solid #000;text-align:center;vertical-align:middle;font-size:6px">1</td>
-            <td id="ch_r1_time" style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
-            <td id="ch_r1_cw_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cw_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cw_set" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cd_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cd_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_dis" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_motor" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_limit" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cond_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_cond_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_evap_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_evap_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_oil_t" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r1_oil_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_time" style="border:0.5px solid #888;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
+            <td id="ch_r1_cw_in" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cw_out" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cw_set" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cd_in" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cd_out" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_dis" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_motor" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_limit" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cond_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_cond_sat" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_evap_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_evap_sat" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_oil_t" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r1_oil_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
             <td rowspan="3" style="border:1px solid #000"></td>
           </tr>
           <tr>
-            <td id="ch_r2_time" style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
-            <td id="ch_r2_cw_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cw_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cw_set" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cd_in" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cd_out" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_dis" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_motor" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_limit" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cond_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_cond_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_evap_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_evap_sat" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_oil_t" style="border:1px solid #000;text-align:center;font-size:6px"></td>
-            <td id="ch_r2_oil_p" style="border:1px solid #000;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_time" style="border:0.5px solid #888;text-align:left;padding-left:2px;font-size:6px;height:14px"></td>
+            <td id="ch_r2_cw_in" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cw_out" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cw_set" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cd_in" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cd_out" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_dis" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_motor" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_limit" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cond_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_cond_sat" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_evap_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_evap_sat" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_oil_t" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
+            <td id="ch_r2_oil_p" style="border:0.5px solid #aaa;text-align:center;font-size:6px"></td>
           </tr>
           <tr>
-            <td style="border:1px solid #000;text-align:left;padding-left:2px;font-size:6px;height:14px">:</td>
+            <td style="border:0.5px solid #aaa;text-align:left;padding-left:2px;font-size:6px;height:14px">:</td>
             <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
             <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
             <td style="border:1px solid #000"></td><td style="border:1px solid #000"></td>
@@ -3700,45 +3701,30 @@ window.chPrint=function(){
   if(!doc)return;
   const btn=document.getElementById('chPrtBtn');
   if(btn){btn.textContent='⏳ PDF 생성중...';btn.disabled=true;}
-
   const wrapper=doc.parentElement;
   const origStyle=wrapper?wrapper.getAttribute('style'):'';
   if(wrapper)wrapper.setAttribute('style','border-radius:12px');
-
   function restore(){if(wrapper&&origStyle)wrapper.setAttribute('style',origStyle);}
-
   function loadScript(src,cb){
     var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
   }
-
   function doCapture(){
     html2canvas(doc,{
       scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',
-      width:doc.offsetWidth,height:doc.offsetHeight,
-      windowWidth:doc.offsetWidth
+      width:doc.offsetWidth,height:doc.offsetHeight,windowWidth:doc.offsetWidth
     }).then(function(canvas){
       restore();
       var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
       var pw=287,ph=200;
       var ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));
       var dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
-      var imgData=canvas.toDataURL('image/jpeg',0.95);
-      pdf.addImage(imgData,'JPEG',5,5,dw,dh);
-
-      // 모바일 크롬 호환 저장 방식
-      var pdfBlob=pdf.output('blob');
-      var url=URL.createObjectURL(pdfBlob);
+      pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',5,5,dw,dh);
+      var blob=pdf.output('blob');
+      var url=URL.createObjectURL(blob);
       var a=document.createElement('a');
-      a.href=url;
-      a.download='냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf';
-      a.style.display='none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function(){
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      },3000);
-
+      a.href=url;a.download='냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf';
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},3000);
       if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
     }).catch(function(e){
       restore();
@@ -3746,7 +3732,6 @@ window.chPrint=function(){
       alert('오류:'+e.message);
     });
   }
-
   if(window.html2canvas&&window.jspdf){doCapture();return;}
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',doCapture);
