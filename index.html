@@ -108,32 +108,115 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
   display:grid;
   grid-template-columns:1fr 1fr;
   grid-template-rows:1fr 1fr;
-  flex:1;gap:3px;background:#060a10;
-  min-height:0;overflow:hidden;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  background:#060a10;
+  padding:24px 24px 30px;
+  gap:42px 28px;
+  align-items:center;
+  justify-items:center;
+  position:relative;
+}
+#domainGrid::before{
+  content:'';
+  position:absolute;
+  left:50%;top:0;bottom:0;
+  width:2px;
+  background:rgba(148,163,184,.42);
+  transform:translateX(-1px);
+  pointer-events:none;
+  z-index:0;
+}
+#domainGrid::after{
+  content:'';
+  position:absolute;
+  top:50%;left:0;right:0;
+  height:2px;
+  background:rgba(148,163,184,.42);
+  transform:translateY(-1px);
+  pointer-events:none;
+  z-index:0;
 }
 /* 도메인 카드 */
 .dc{
-  flex:1;min-height:0;overflow:hidden;
-  display:flex;flex-direction:column;
+  width:100%;
+  height:100%;
+  min-height:0;
+  overflow:visible;
+  display:flex;
   align-items:center;
   justify-content:center;
-  padding:12px;
-  cursor:pointer;border:none;
-  background:#111827;
+  padding:0;
+  margin:0;
+  cursor:pointer;
+  border:none;
+  background:transparent;
   position:relative;
-  text-align:center;color:var(--text);
-  transition:background .15s;
+  z-index:1;
+  transition:transform .12s;
   -webkit-tap-highlight-color:transparent;
-  gap:8px;
 }
-.dc:active{background:#1a2233}
-.dc-top-bar{position:absolute;top:0;left:0;right:0;height:3px}
-.dc-icon{font-size:44px;line-height:1}
-.dc-name{font-size:26px;font-weight:900;letter-spacing:-.8px}
-.dc-desc{display:none}
-.dc-stat{margin-top:12px;display:flex;align-items:center;gap:8px}
-.dc-count{font-size:13px;font-weight:800}
-.dc-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.dc:active{transform:scale(.97)}
+.dc-card{
+  position:relative;
+  width:min(100%, 248px);
+  aspect-ratio:1/1;
+  overflow:hidden;
+  border-radius:24px;
+  background:#fff;
+  box-shadow:0 10px 28px rgba(0,0,0,.32);
+}
+.dc-img{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center center;
+}
+.dc-badges{
+  position:absolute;
+  top:8px;
+  right:8px;
+  left:auto;
+  z-index:3;
+  pointer-events:none;
+}
+.dc-pill{
+  min-width:58px;
+  height:30px;
+  padding:0 12px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:21px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-1px;
+  white-space:nowrap;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(226,232,240,.95);
+  box-shadow:0 2px 8px rgba(15,23,42,.14);
+}
+.dc-count.arch{color:#2f95df}.dc-count.mech{color:#109e9a}.dc-count.elec{color:#f4b400}.dc-count.gen{color:#6d4ed8}
+@media(max-width:420px){
+  #domainGrid{padding:24px 24px 34px;gap:44px 28px}
+  .dc-card{width:min(100%, 236px);border-radius:24px}
+  .dc-pill{font-size:21px;min-width:58px;height:30px;padding:0 12px}
+}
+@media(min-width:560px){
+  #domainGrid{padding:32px 48px 38px;gap:64px 48px}
+  .dc{border-radius:0}
+  .dc-card{width:min(86%, 270px);max-height:calc(100% - 30px);border-radius:26px}
+}
+@media(orientation:landscape){
+  #domainGrid{padding:20px 54px 28px;gap:34px 54px}
+  .dc-card{width:min(78%, 260px);max-height:calc(100% - 34px);border-radius:24px}
+  .dc-badges{top:8px;right:8px}
+}
 
 /* 하단 퀵바 제거 - 사이드바로 통합 */
 .home-quick{display:none}
@@ -1398,25 +1481,19 @@ function switchExtMode(mode){
 function renderHomeScreen(){
   const grid=document.getElementById('domainGrid');
   if(!grid)return;
-  const clr={arch:'var(--arch)',elec:'var(--elec)',mech:'var(--mech)',gen:'var(--gen)'};
-  const bg={arch:'rgba(249,115,22,.08)',elec:'rgba(59,130,246,.08)',mech:'rgba(16,185,129,.08)',gen:'rgba(168,85,247,.08)'};
-  grid.innerHTML=DOMAINS.map((d,i)=>{
-    const works=state.works.filter(w=>w.domain===d.id);
-    const open=works.filter(w=>w.isNormal==='N').length;
-    const urgent=works.filter(w=>w.priority==='긴급').length;
-    const badgeHtml=urgent>0
-      ? '<span class="dc-badge" style="background:var(--urgent);color:#fff">🔴 긴급 '+urgent+'</span>'
-      : open>0
-        ? '<span class="dc-badge" style="background:rgba(245,158,11,.2);color:var(--warn);border:1px solid rgba(245,158,11,.3)">⚠ 미정상 '+open+'</span>'
-        : '<span class="dc-badge" style="background:rgba(34,197,94,.15);color:var(--ok);border:1px solid rgba(34,197,94,.3)">✅ 정상</span>';
-    return '<button class="dc" onclick="openDomainFromHome('+i+')" style="background:'+bg[d.id]+'">'
-      +'<div class="dc-top-bar" style="background:'+clr[d.id]+'"></div>'
-      +'<div class="dc-icon">'+d.icon+'</div>'
-      +'<div class="dc-name" style="color:'+clr[d.id]+'">'+d.label+'</div>'
-      +'<div class="dc-desc">'+d.desc+'</div>'
-      +'<div class="dc-stat">'
-      +'<span class="dc-count" style="color:'+clr[d.id]+'">'+works.length+'건</span>'
-      +badgeHtml
+  const cards=[
+    {idx:0,id:'arch',img:'card2_arch.png',alt:'건축'},
+    {idx:1,id:'mech',img:'card2_mech.png',alt:'기계'},
+    {idx:2,id:'elec',img:'card2_elec.png',alt:'전기'},
+    {idx:3,id:'gen',img:'card2_gen.png',alt:'일반'}
+  ];
+  grid.innerHTML=cards.map(c=>{
+    const bad=state.works.filter(w=>w.domain===c.id&&w.isNormal==='N').length;
+    const badge=bad>0 ? '<div class="dc-badges"><span class="dc-pill dc-count '+c.id+'">'+bad+'건</span></div>' : '';
+    return '<button class="dc" onclick="openDomainFromHome('+c.idx+')" aria-label="'+c.alt+'">'
+      +'<div class="dc-card">'
+      +'<img class="dc-img" src="'+c.img+'" alt="'+c.alt+'">'
+      +badge
       +'</div>'
       +'</button>';
   }).join('');
