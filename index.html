@@ -1964,17 +1964,7 @@ window.generateDayReport=async function(dateStr){
   .btn-row{display:flex;gap:10px;padding:14px 16px 24px;background:#fff}
   .btn-kakao{flex:1;padding:15px;border:none;border-radius:14px;background:#FEE500;color:#3C1E1E;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
   .btn-print{flex:0 0 52px;padding:15px;border:none;border-radius:14px;background:#f1f5f9;color:#374151;font-size:20px;cursor:pointer}
-  @media print {
-  @page { size: A4 landscape; margin: 5mm; }
-  body { background: #fff !important; }
-  .ui, #chillerScreen > div:first-child { display: none !important; }
-  #chillerDoc {
-    width: 277mm !important;
-    min-width: unset !important;
-    font-family: 'Malgun Gothic', dotum, sans-serif !important;
-  }
-  #chillerDoc table { font-size: 6px !important; }
-}.btn-row{display:none!important}.wrap{max-width:100%}}
+  @media print{body{background:#fff}.btn-row{display:none!important}.wrap{max-width:100%}}
   
 .notice-blink{animation:notice-blink 1.2s ease-in-out infinite}
 @keyframes notice-blink{0%,100%{box-shadow:0 0 0 0 rgba(255,71,87,.5)}50%{box-shadow:0 0 0 8px rgba(255,71,87,0)}}
@@ -3711,40 +3701,56 @@ window.chPrint=function(){
   const btn=document.getElementById('chPrtBtn');
   if(btn){btn.textContent='⏳ PDF 생성중...';btn.disabled=true;}
 
+  const wrapper=doc.parentElement;
+  const origStyle=wrapper?wrapper.getAttribute('style'):'';
+  if(wrapper)wrapper.setAttribute('style','border-radius:12px');
+
+  function restore(){if(wrapper&&origStyle)wrapper.setAttribute('style',origStyle);}
+
   function loadScript(src,cb){
-    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
     var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
   }
 
-  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
-      html2canvas(doc,{
-        scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',
-        width:doc.scrollWidth,height:doc.scrollHeight,
-        scrollX:0,scrollY:0
-      }).then(function(canvas){
-        var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-        var pw=297,ph=210;
-        var cw=canvas.width/2,ch=canvas.height/2; // scale=2이므로 실제크기로 환산
-        var ratio=Math.min(pw/cw,ph/ch);
-        var dw=cw*ratio,dh=ch*ratio;
-        var ox=(pw-dw)/2,oy=(ph-dh)/2;
-        pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',ox,oy,dw,dh);
-        pdf.save('냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf');
-        if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
-      }).catch(function(e){
-        alert('PDF 생성 실패: '+e.message);
-        if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
-      });
+  function doCapture(){
+    html2canvas(doc,{
+      scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',
+      width:doc.offsetWidth,height:doc.offsetHeight,
+      windowWidth:doc.offsetWidth
+    }).then(function(canvas){
+      restore();
+      var pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+      var pw=287,ph=200;
+      var ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));
+      var dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
+      var imgData=canvas.toDataURL('image/jpeg',0.95);
+      pdf.addImage(imgData,'JPEG',5,5,dw,dh);
+
+      // 모바일 크롬 호환 저장 방식
+      var pdfBlob=pdf.output('blob');
+      var url=URL.createObjectURL(pdfBlob);
+      var a=document.createElement('a');
+      a.href=url;
+      a.download='냉동기점검일지_'+new Date().toISOString().slice(0,10)+'.pdf';
+      a.style.display='none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      },3000);
+
+      if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
+    }).catch(function(e){
+      restore();
+      if(btn){btn.textContent='🖨 PDF 저장';btn.disabled=false;}
+      alert('오류:'+e.message);
     });
-  });
-};
-    document.head.appendChild(s1);
   }
-};
-  <\/script>
-  </body></html>`);
-  w.document.close();
+
+  if(window.html2canvas&&window.jspdf){doCapture();return;}
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',doCapture);
+  });
 };
 </script>
 </body>
