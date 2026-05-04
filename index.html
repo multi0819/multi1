@@ -1951,26 +1951,9 @@ window.kakaoShare=async function(schedId,dateStr){
     +reportRows
     +(modalPhotos.length?'<div class="ps"><div class="pl">현장사진 '+modalPhotos.length+'장</div>'+photoGrid+'</div>':'')
     +'<div class="ft">사무동 시설관리 · '+dateStr+' '+timeStr+'</div></body></html>';
-  await loadHtml2Canvas();
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:640px;height:4000px;border:none;visibility:hidden';
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();iframe.contentDocument.write(rHtml);iframe.contentDocument.close();
-  await new Promise(r=>setTimeout(r,1400));
-  try{
-    const bd=iframe.contentDocument.body;const docH=Math.max(bd.scrollHeight,bd.offsetHeight,600);
-    const canvas=await html2canvas(bd,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',width:640,height:docH,windowWidth:640,windowHeight:docH,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:8000});
-    document.body.removeChild(iframe);
-    canvas.toBlob(function(blob){
-      const fileName='점검보고_'+dateStr+'_'+((sched&&sched.name||'').replace(/[\/:*?"<>|]/g,'').slice(0,12))+'.jpg';
-      showGeneratedImagePanel(blob,fileName);
-    },'image/jpeg',0.82);
-  }catch(err){
-    try{document.body.removeChild(iframe);}catch(e){}
-    const blob=new Blob([rHtml],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='점검보고_'+dateStr+'.html';document.body.appendChild(a);a.click();a.remove();showToast('파일로 저장됐습니다.');
-  }
-};
-function loadHtml2Canvas(){
+  const safeName=((sched&&sched.name||'').replace(/[\/:*?"<>|]/g,'').slice(0,12));
+  openGeneratedReportWindow(rHtml,'점검보고_'+dateStr+'_'+safeName+'.jpg','점검보고_'+dateStr+'.html');
+};function loadHtml2Canvas(){
   return new Promise(res=>{
     if(window.html2canvas){res();return;}
     const s=document.createElement('script');
@@ -1981,86 +1964,30 @@ function loadHtml2Canvas(){
   });
 }
 
-
-/* 생성된 보고서 이미지를 사용자가 실제로 확인/저장/공유할 수 있게 표시 */
-function showGeneratedImagePanel(blob,fileName){
-  if(!blob){showToast('이미지 생성 실패: 결과 파일이 없습니다.');return;}
+function openGeneratedReportWindow(reportHtml,imageFileName,htmlFileName){
+  const page='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+  +'<title>보고서 미리보기</title><style>*{box-sizing:border-box}body{margin:0;background:#0b1220;font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif;color:#fff}.top{position:sticky;top:0;z-index:20;background:#111827;padding:12px 14px;border-bottom:1px solid #334155}.title{font-size:20px;font-weight:900;margin-bottom:10px}.bar{display:flex;gap:8px}.bar button{flex:1;border:0;border-radius:12px;padding:13px 8px;font-size:17px;font-weight:900;cursor:pointer}.save{background:#22c55e;color:#fff}.share{background:#FEE500;color:#3C1E1E}.print{background:#1f2937;color:#fff;border:1px solid #475569!important}.view{width:100%;max-width:700px;margin:0 auto;background:#fff;color:#111}.view iframe{display:block;width:100%;border:0;background:#fff}@media print{.top{display:none}.view{max-width:none}}</style></head><body>'
+  +'<div class="top"><div class="title">✅ 이미지 생성 완료</div><div class="bar"><button class="save" id="saveBtn">저장</button><button class="share" id="shareBtn">공유</button><button class="print" id="printBtn">인쇄</button></div></div>'
+  +'<div class="view"><iframe id="reportFrame"></iframe></div>'
+  +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script><script>'
+  +'const reportHtml='+JSON.stringify(reportHtml)+';const imageFileName='+JSON.stringify(imageFileName)+';const htmlFileName='+JSON.stringify(htmlFileName)+';'
+  +'const f=document.getElementById("reportFrame");f.contentDocument.open();f.contentDocument.write(reportHtml);f.contentDocument.close();'
+  +'function fit(){try{f.style.height=Math.max(600,f.contentDocument.body.scrollHeight)+"px";}catch(e){}}setTimeout(fit,500);setTimeout(fit,1500);'
+  +'async function makeBlob(){fit();const b=f.contentDocument.body;const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:640,height:h,windowWidth:640,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:8000});return await new Promise(r=>c.toBlob(r,"image/jpeg",0.9));}'
+  +'async function saveImage(){try{const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("이미지를 저장했습니다. 갤러리/다운로드에서 카톡으로 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}}'
+  +'async function shareImage(){try{const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/jpeg"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"점검보고"});return;}await saveImage();}catch(e){await saveImage();}}'
+  +'document.getElementById("saveBtn").onclick=saveImage;document.getElementById("shareBtn").onclick=shareImage;document.getElementById("printBtn").onclick=()=>window.print();'
+  +'<\/script></body></html>';
+  const blob=new Blob([page],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
-  const old=document.getElementById('generatedImagePanel');
-  if(old){
-    try{URL.revokeObjectURL(old.dataset.url||'');}catch(e){}
-    old.remove();
+  const win=window.open(url,'_blank');
+  if(!win){
+    const a=document.createElement('a');a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();
+    showToast('보고서 미리보기 파일을 열어 저장/공유하세요.');
+  }else{
+    showToast('보고서 미리보기를 열었습니다. 저장 또는 공유를 누르세요.');
   }
-  const panel=document.createElement('div');
-  panel.id='generatedImagePanel';
-  panel.dataset.url=url;
-  panel.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.72);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:18px;pointer-events:auto;touch-action:manipulation';
-  panel.innerHTML='<div style="width:min(96vw,520px);max-height:92vh;background:#111827;border:1px solid #334155;border-radius:18px;box-shadow:0 16px 60px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto">'
-    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #334155;flex:0 0 auto">'
-    +'<div style="flex:1;font-size:16px;font-weight:900;color:#e5e7eb">✅ 이미지 생성 완료</div>'
-    +'<button type="button" id="genImgCloseBtn" style="width:42px;height:42px;border:0;border-radius:12px;background:#1f2937;color:#e5e7eb;font-size:24px;cursor:pointer;pointer-events:auto">×</button></div>'
-    +'<div style="padding:12px;overflow:auto;background:#0b1220;min-height:0;flex:1 1 auto"><img src="'+url+'" alt="생성된 보고서" style="width:100%;height:auto;display:block;border-radius:10px;background:#fff"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px;border-top:1px solid #334155;background:#111827;flex:0 0 auto">'
-    +'<button type="button" id="genImgSaveBtn" style="height:52px;border:0;border-radius:12px;background:#22c55e;color:#fff;font-weight:900;font-size:18px;cursor:pointer;pointer-events:auto;touch-action:manipulation">저장</button>'
-    +'<button type="button" id="genImgShareBtn" style="height:52px;border:0;border-radius:12px;background:#fde047;color:#111827;font-weight:900;font-size:18px;cursor:pointer;pointer-events:auto;touch-action:manipulation">공유</button>'
-    +'<button type="button" id="genImgOpenBtn" style="height:52px;border:1px solid #475569;border-radius:12px;background:#1f2937;color:#e5e7eb;font-weight:900;font-size:18px;cursor:pointer;pointer-events:auto;touch-action:manipulation">새창</button>'
-    +'</div></div>';
-
-  function closePanel(){
-    try{URL.revokeObjectURL(url);}catch(e){}
-    panel.remove();
-  }
-  function saveWithDownloadLink(){
-    const a=document.createElement('a');
-    a.href=url;
-    a.download=fileName||'점검보고.jpg';
-    a.style.display='none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){a.remove();},80);
-    showToast('저장 버튼 실행됨. 다운로드 폴더를 확인하세요.');
-  }
-  function openImageFallback(){
-    const w=window.open(url,'_blank');
-    if(!w)showToast('새창이 막혔습니다. 이미지를 길게 눌러 저장하세요.');
-  }
-  function downloadBlob(){
-    /* Android 미리보기/파일 실행 환경에서는 a.download가 막히는 경우가 있어
-       먼저 새창 저장 경로를 열고, 동시에 다운로드 링크도 시도한다. */
-    saveWithDownloadLink();
-    setTimeout(openImageFallback,180);
-  }
-  async function shareBlob(){
-    try{
-      const file=new File([blob],fileName||'점검보고.jpg',{type:blob.type||'image/jpeg'});
-      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file],title:'점검보고'});
-        return;
-      }
-      if(navigator.share){
-        await navigator.share({title:'점검보고',text:'점검보고 이미지가 생성되었습니다.'});
-        return;
-      }
-      downloadBlob();
-    }catch(e){
-      if(String(e&&e.name)!=='AbortError')downloadBlob();
-    }
-  }
-  function bindBtn(id,fn){
-    const b=document.getElementById(id);
-    if(!b)return;
-    b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();fn();return false;};
-    b.ontouchstart=function(ev){ev.stopPropagation();};
-  }
-  document.body.appendChild(panel);
-  bindBtn('genImgCloseBtn',closePanel);
-  bindBtn('genImgSaveBtn',downloadBlob);
-  bindBtn('genImgShareBtn',shareBlob);
-  bindBtn('genImgOpenBtn',openImageFallback);
-  panel.onclick=function(e){if(e.target===panel)closePanel();};
-  showToast('이미지 생성 완료. 저장/공유 버튼을 누르세요.');
 }
-
 
 /* 토스트 메시지 */
 function showToast(msg){
@@ -2150,7 +2077,7 @@ window.generateDayReport=async function(dateStr){
   <script>
   const _msg=${JSON.stringify(kakaoMsg)};
   async function savePDF(){
-    const card=document.querySelector('.card')||document.querySelector('.wrap');
+    const card=document.querySelector('.wrap')||document.body;
     if(!card){window.print();return;}
     // 버튼 숨기고 캡처
     const btnArea=document.querySelector('.btn-row');
