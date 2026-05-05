@@ -3658,7 +3658,7 @@ window.viewVOC=function(id){const w=state.works.find(x=>x.id===id);if(!w)return;
 let mechFormType='gas', mechFormMode='form', editMechFormId=null, mechPatrolRoom='1';
 function isMechPatrolLike(type){return type==='patrol'||type==='elecPatrol';}
 function isElecSingleForm(type){return type==='elecDaily'||type==='elecExtra';}
-function isMechLandscapeForm(type){return isMechPatrolLike(type)||isElecSingleForm(type);}
+function isMechLandscapeForm(type){return isMechPatrolLike(type)||type==='elecExtra';}
 const MECH_DAYS=['금','토','일','월','화','수','목'];
 function mechMonthStart(v){
   const d=v?new Date(v):new Date();
@@ -4348,8 +4348,8 @@ function downloadMechPdf(rec){
     const pdf=new window.jspdf.jsPDF({orientation:isPatrol?'landscape':'portrait',unit:'mm',format:'a4'});
     const img=canvas.toDataURL('image/jpeg',0.95);
     if(rec.type==='elecDaily'){
-      // 방화업무일지는 엑셀 A4 세로 양식 자체가 기준이므로
-      // canvas 픽셀 크기로 다시 축소하지 않고 A4 출력 영역에 고정 배치한다.
+      // 냉동제조시설 출력 방식과 동일하게 A4 세로 페이지 기준으로 맞춘다.
+      // elecDaily는 isMechLandscapeForm에서 제외되어 jsPDF도 portrait로 생성된다.
       pdf.addImage(img,'JPEG',7,5,196,286);
     }else if(rec.type==='elecExtra'){
       // 추가 출력물은 A4 가로 양식 기준 고정 배치.
