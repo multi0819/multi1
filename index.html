@@ -2502,26 +2502,8 @@ window.kakaoShare=async function(schedId,dateStr){
   await saveTaskLog(schedId,dateStr);
   closeModal('taskModal');
   showToast('보고서 이미지 생성 중...');
-  // 사진 방향별 배열: 가로사진은 1열 전체폭, 세로사진은 2열 배치
-  async function getImgShape(src){
-    return new Promise(function(resolve){
-      var im=new Image();
-      im.onload=function(){resolve({src:src,landscape:im.naturalWidth>=im.naturalHeight});};
-      im.onerror=function(){resolve({src:src,landscape:false});};
-      im.src=src;
-    });
-  }
-  const photoInfos=await Promise.all(modalPhotos.map(getImgShape));
-  // 가로/세로가 섞여 있을 때만 가로사진을 1열 전체폭으로 배치.
-  // 가로사진만 있거나 세로사진만 있으면 모두 2열 배열 유지.
-  const hasLandscape=photoInfos.some(function(p){return p.landscape;});
-  const hasPortrait=photoInfos.some(function(p){return !p.landscape;});
-  const mixedPhotoShape=hasLandscape&&hasPortrait;
-  const photoGrid='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">'
-    +photoInfos.map(function(p){
-      var span=(mixedPhotoShape&&p.landscape)?'grid-column:1 / -1;':'';
-      return '<img src="'+p.src+'" style="'+span+'width:100%;height:auto;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)">';
-    }).join('')+'</div>';
+  // 출력물 사진 배치: 가로사진은 한 줄 1장, 세로사진은 한 줄 2장
+  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'10px'});
   function card(label,val,color){return '<div style="background:#fff;border:1.5px solid #bfdbfe;border-radius:10px;padding:11px 13px"><div style="font-size:14px;color:#64748b;margin-bottom:3px;font-weight:600">'+label+'</div><div style="font-size:22px;font-weight:900;color:'+(color||'#111827')+'">'+val+'</div></div>';}
   var reportRows='';
   if(isRpt){
@@ -2565,7 +2547,32 @@ window.kakaoShare=async function(schedId,dateStr){
     +'<div class="ft">사무동 시설관리 · '+dateStr+' '+timeStr+'</div></body></html>';
   const safeName=((sched&&sched.name||'').replace(/[\/:*?"<>|]/g,'').slice(0,12));
   openGeneratedReportWindow(rHtml,'점검보고_'+dateStr+'_'+safeName+'.jpg','점검보고_'+dateStr+'.html');
-};function loadHtml2Canvas(){
+};
+/* 출력물 공통 사진 배치: 가로사진은 한 줄 1장, 세로사진은 한 줄 2장 */
+async function buildOutputPhotoGridHtml(photos,opt){
+  opt=opt||{};
+  const list=(photos||[]).filter(Boolean);
+  if(!list.length)return '';
+  function getImgShape(src){
+    return new Promise(function(resolve){
+      var im=new Image();
+      im.onload=function(){resolve({src:src,landscape:im.naturalWidth>=im.naturalHeight});};
+      im.onerror=function(){resolve({src:src,landscape:false});};
+      im.src=src;
+    });
+  }
+  const infos=await Promise.all(list.map(getImgShape));
+  const gap=opt.gap||'10px';
+  const gridStyle=opt.gridStyle||'';
+  const imgStyle=opt.imgStyle||'width:100%;height:auto;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)';
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:'+gap+';align-items:start;'+gridStyle+'">'
+    +infos.map(function(p){
+      var span=p.landscape?'grid-column:1 / -1;':'';
+      return '<img src="'+p.src+'" style="'+span+imgStyle+'">';
+    }).join('')+'</div>';
+}
+
+function loadHtml2Canvas(){
   return new Promise(res=>{
     if(window.html2canvas){res();return;}
     const s=document.createElement('script');
@@ -2622,11 +2629,13 @@ window.generateDayReport=async function(dateStr){
   const timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
 
   let rows='';
-  tasks.forEach(task=>{
+  for(const task of tasks){
     const log=logs.find(l=>l.scheduleId===task.id);
     const dom=DOMAINS.find(d=>d.id===task.domain)||DOMAINS[3];
     const statusColor=!log?'#9ca3af':log.status==='정상'?'#16a34a':'#ef4444';
-    const photoHtml=log?.photos?.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${log.photos.map(s=>`<img src="${s}" style="width:85px;height:85px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb">`).join('')}</div>`:'';
+    const photoHtml=log?.photos?.length
+      ? '<div style="margin-top:8px">'+await buildOutputPhotoGridHtml(log.photos,{gap:'6px',imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block'})+'</div>'
+      : '';
     rows+=`<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:${!log?'#fafafa':log.status==='정상'?'#f0fdf4':'#fef2f2'}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:18px">${!log?'⬜':log.status==='정상'?'✅':'❌'}</span>
@@ -2637,7 +2646,7 @@ window.generateDayReport=async function(dateStr){
       ${log?.note&&log.note!=='없음'?`<div style="margin-top:7px;font-size:12px;color:#374151;background:#fff;border-radius:7px;padding:7px 10px">💬 ${esc(log.note)}</div>`:''}
       ${photoHtml}
     </div>`;
-  });
+  }
 
   // 카톡 공유 텍스트
   const kakaoMsg=`[사무동 시설관리]\n📋 일일점검 보고\n📅 ${dateStr} ${timeStr}\n진행률: ${pct}% (${doneCount}/${tasks.length}건)\n\n`
