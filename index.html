@@ -2083,8 +2083,8 @@ function renderPartSubMenu(i){
       {icon:'🚶',title:'기계파트 순찰일지',desc:'월간 순찰 항목 작성/출력',action:'openMechForm(\'patrol\')'}
     ],
     elec:[
-      {icon:'🚶',title:'전기 야간 순찰일지',desc:'월간 전기 야간 순찰 항목 작성/출력',action:'openMechForm(\'elecPatrol\')'},
-      ...common
+      {icon:'🚶',title:'야간 순찰일지',desc:'월간 전기 야간 순찰 항목 작성/출력',action:'openMechForm(\'elecPatrol\')'},
+      {icon:'📝',title:'방화업무일지',desc:'엑셀 양식 기준 방화 업무일지 작성/출력',action:'openMechForm(\'elecDaily\')'}
     ],
     gen:[...common]
   };
@@ -3657,6 +3657,8 @@ window.viewVOC=function(id){const w=state.works.find(x=>x.id===id);if(!w)return;
 /* ════ 기계파트 하부메뉴 양식: 도시가스 / 냉동제조 / 순찰 ════ */
 let mechFormType='gas', mechFormMode='form', editMechFormId=null, mechPatrolRoom='1';
 function isMechPatrolLike(type){return type==='patrol'||type==='elecPatrol';}
+function isElecSingleForm(type){return type==='elecDaily'||type==='elecExtra';}
+function isMechLandscapeForm(type){return isMechPatrolLike(type)||isElecSingleForm(type);}
 const MECH_DAYS=['금','토','일','월','화','수','목'];
 function mechMonthStart(v){
   const d=v?new Date(v):new Date();
@@ -3669,6 +3671,7 @@ function mechMonthEnd(v){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0');
 }
 function mechInputDays(type,start){
+  if(isElecSingleForm(type)){return [{label:'점검일',date:mechFmtMD(start||today()),dateStr:start||today()}];}
   if(isMechPatrolLike(type)){
     const st=new Date(mechMonthStart(start||today()));
     const cnt=new Date(st.getFullYear(),st.getMonth()+1,0).getDate();
@@ -3720,7 +3723,30 @@ const MECH_FORM_DEFS={
   patrol:{title:'기계파트 순찰일지',desc:'기계파트 주·야간 순찰일지를 월/주 단위로 작성하고 PDF로 생성합니다.',items:[
     ['주간','옥상 냉각탑','밸브/배관 스캔: 헤더 배관 플랜지 누수 확인'],['주간','옥상 냉각탑','버터플라이 밸브 목 부분 크랙 확인'],['주간','옥상 냉각탑','냉각탑 하부 수조 누수 및 외부 보온재 찍어짐 확인'],['주간','옥상 배기팬','배기팬 정상 가동 확인'],['주간','배기팬','V벨트 이상 소리 및 모터·베어링 이상 소음 청음'],['주간','지상층 공조실','공조실 내 소음 확인 및 주변 폐기물 정리'],['주간','공조실','공조기 운전 스케줄 정상 적용 여부 확인'],['야간','지하 기계실','냉온수기 및 냉난방순환펌프 가동시 소음 및 진동'],['야간','지하 기계실','기계실 바닥, 장비 하단부 신규 누수흔적 확인'],['야간','지하 주차장','주차장 휀 및 오수펌프 가동시 소음 및 진동'],['야간','지하 주차장','주차장 바닥, 천정부 누수 확인']
   ]},
-  elecPatrol:{title:'2BL 전기 야간 순찰 일지',desc:'전기파트 야간 순찰일지를 월 단위로 작성하고 PDF로 생성합니다.',items:[
+  elecDaily:{title:'방화업무일지',desc:'엑셀 원본 방화 업무 일지 양식을 그대로 작성하고 PDF로 생성합니다.',items:[
+    ['소\n방\n설\n비','소화기, 소화전','- 소화기 설치위치, 충약상태, 소화기 안전핀 체결상태 확인'],
+    ['소\n방\n설\n비','소화기, 소화전','- 소화전호스, 노즐 관리 상태 확인 (소방 주/예비/충압 펌프 상태)'],
+    ['소\n방\n설\n비','소화기, 소화전','- 소화전 앞 적치물 상태 확인'],
+    ['소\n방\n설\n비','스프링클러설비','- 알람 밸브 주 밸브 개방 상태 확인'],
+    ['소\n방\n설\n비','스프링클러설비','- 알람밸브 1, 2차측 압력계 상태 확인 (1차, 2차측 차이 0.1㎫ 이상)'],
+    ['소\n방\n설\n비','스프링클러설비','- 스프링클러 배관 및 헤드 누수 상태 확인'],
+    ['소\n방\n설\n비','가스소화설비','- 가스소화설비 수신기 셋팅 및 솔레노이드 이상유무'],
+    ['소\n방\n설\n비','가스소화설비','- 가스소화설비 저장용기 외 충압상태'],
+    ['소\n방\n설\n비','감지기, 수신기','- 화재 감지기 설치 및 외관 상태 확인 (화재 수신기 셋팅 상태)'],
+    ['소\n방\n설\n비','감지기, 수신기','- 발신기 및 경종 설치 상태 (시각경보기, 비상콘센트 포함)'],
+    ['소\n방\n설\n비','유도등','- 유도등 점등 및 전원 충전 상태 확인'],
+    ['소\n방\n설\n비','유도등','- 유도등 외관 파손여부 확인'],
+    ['소\n방\n설\n비','피난설비','- 기타 피난설비 (완강기) 및 비상계단 물품 적재 확인'],
+    ['소\n방\n설\n비','제연설비','- 제연 급/배기 휀 상태 확인'],
+    ['소\n방\n설\n비','제연설비','- 제연 급/배기 댐퍼 앞 물품 적재 상태 확인'],
+    ['소\n방\n설\n비','제연설비','- 방화셔터, 배연창 동작 상태 확인 및 물품 적재 상태 확인'],
+    ['방\n화\n관\n리','화기취급','- 전열기구 등 관리상태의 적정여부'],
+    ['방\n화\n관\n리','화기취급','- 발전기실 경유 탱크 누유 상태 및 환기시설 정상 상태 확인'],
+    ['방\n화\n관\n리','화기취급','- 전층 가연물 방치 상태 확인'],
+    ['방\n화\n관\n리','화기취급','- 화기작업시 안전관리상태의 적정여부']
+  ]},
+  elecExtra:{title:'전기파트 추가 출력물',desc:'전기파트 이상내용·조치내용·확인결과 추가 출력 양식을 작성하고 PDF로 생성합니다.',items:Array.from({length:13},(_,i)=>[String(i+1)])},
+  elecPatrol:{title:'야간 순찰일지',desc:'전기파트 야간 순찰일지를 월 단위로 작성하고 PDF로 생성합니다.',items:[
     ['PHE E/V\n기계실','','승강기 기계실내 온도 적정 여부'],['PHE E/V\n기계실','','이상 소음 또는 진동 여부'],['PHE E/V\n기계실','','출입문 잠겨있고 도어락은 정상 작동 여부'],['PHE E/V\n기계실','','분전반에서 타는 냄새 여부'],
     ['소화\n수조실','','소화수조 수위 적정 여부'],['소화\n수조실','','옥내소화전설비용 동력제어반(MCC)판넬 정상 작동여부'],['소화\n수조실','','스프링클러설비용 동력제어반(MCC)판넬 정상 작동여부'],['소화\n수조실','','소방용 주펌프, 예비펌프, 충압펌프 누수 여부'],['소화\n수조실','','전자식압력스위치 / 압력 게이지 정상 여부'],['소화\n수조실','','소방용 감압밸브 누수 여부'],
     ['MDF실','','MDF실내 온도 적정 여부'],['MDF실','','이상 소음 또는 진동 여부'],['MDF실','','출입문 잠겨있고 도어락은 정상 작동 여부'],['MDF실','','분전반에서 타는 냄새 여부']
@@ -3949,23 +3975,25 @@ window.setMechMark=function(id,val){
   if(wrap)wrap.querySelectorAll('.mark-btn').forEach(b=>b.classList.toggle('active',b.textContent===input.value));
 };
 function mechFormRows(def, rec){
-  const st=rec?.start||(isMechPatrolLike(mechFormType)?mechMonthStart(today()):mechWeekStart(today()));
+  const st=rec?.start||(isElecSingleForm(mechFormType)?today():(isMechPatrolLike(mechFormType)?mechMonthStart(today()):mechWeekStart(today())));
   const activeDay=mechActiveDayIndexFor(mechFormType,st);
   const dayList=mechInputDays(mechFormType,st);
-  const activeLabel=activeDay>=0?(isMechPatrolLike(mechFormType)?(String(activeDay+1)+'일'):MECH_DAYS[activeDay]):(isMechPatrolLike(mechFormType)?'해당 월 아님':'해당 주간 아님');
+  const activeLabel=isElecSingleForm(mechFormType)?'점검일':(activeDay>=0?(isMechPatrolLike(mechFormType)?(String(activeDay+1)+'일'):MECH_DAYS[activeDay]):(isMechPatrolLike(mechFormType)?'해당 월 아님':'해당 주간 아님'));
   const isRefrig=(mechFormType==='refrig');
   const guide=isRefrig
     ? '<div class="mech-guide"><b>표기방법</b> 월/일, 적합○ ,부적합 ×, 수리요함△, 해당없음 /</div>'
     : '<div class="mech-guide"><b>체크 표기</b> : ○ 적합&nbsp;&nbsp; △ 수리요함&nbsp;&nbsp; × 부적합&nbsp;&nbsp; / 해당없음</div>';
   const dayHeads=dayList.map((d,i)=>'<th class="month-day '+(i===activeDay?'today-col':'')+'" style="width:'+(isMechPatrolLike(mechFormType)?'58':'72')+'px"><span class="day-w">'+esc(d.label)+'</span>'+(d.date?'<br><span class="day-date">'+esc(d.date)+'</span>':'')+'</th>').join('');
-  const tableHead=isRefrig
+  const elecDailyHead='<thead><tr><th style="width:190px">구분</th><th>점검사항</th><th style="width:110px">점검결과</th><th style="width:180px">비고</th></tr></thead>';
+  const elecExtraHead='<thead><tr><th rowspan="2" style="width:48px">No</th><th rowspan="2" style="width:120px">점검위치</th><th rowspan="2" style="width:150px">설비/항목</th><th colspan="4">이상내용</th><th colspan="3">조치내용</th><th colspan="3">확인결과</th><th style="width:190px">비고/사진번호</th></tr><tr><th>발견일</th><th>내용</th><th>위험도</th><th>담당</th><th>조치일</th><th>조치자</th><th>내용</th><th>완료</th><th>재확인</th><th>서명</th><th></th></tr></thead>';
+  const tableHead=mechFormType==='elecDaily'?elecDailyHead:(mechFormType==='elecExtra'?elecExtraHead:(isRefrig
     ? '<thead><tr><th rowspan="2" style="width:52px">번호</th><th rowspan="2" style="width:120px">점검항목</th><th rowspan="2" style="width:260px">점검내용</th><th colspan="'+dayList.length+'">점검결과</th><th rowspan="2" style="width:92px">비고</th></tr><tr>'+dayHeads+'</tr></thead>'
     : (mechFormType==='elecPatrol'
       ? '<thead><tr><th rowspan="2" style="width:105px">구분</th><th rowspan="2" style="width:360px">점검내용</th><th colspan="'+dayList.length+'">점검결과</th><th rowspan="2" style="width:92px">비고</th></tr><tr>'+dayHeads+'</tr></thead>'
-      : '<thead><tr><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'70':'88')+'px">구분</th><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'170':'210')+'px">'+(isMechPatrolLike(mechFormType)?'점검구역':'점검항목')+'</th><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'280':'180')+'px">점검내용</th><th colspan="'+dayList.length+'">점검결과</th><th rowspan="2" style="width:92px">비고</th></tr><tr>'+dayHeads+'</tr></thead>');
+      : '<thead><tr><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'70':'88')+'px">구분</th><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'170':'210')+'px">'+(isMechPatrolLike(mechFormType)?'점검구역':'점검항목')+'</th><th rowspan="2" style="width:'+(isMechPatrolLike(mechFormType)?'280':'180')+'px">점검내용</th><th colspan="'+dayList.length+'">점검결과</th><th rowspan="2" style="width:92px">비고</th></tr><tr>'+dayHeads+'</tr></thead>')));
   return guide
-    +'<div class="mech-active-day-guide">오늘 입력 가능 요일 : <b>'+esc(activeLabel)+'</b> '+(activeDay>=0?'열만 선택 가능합니다.':'현재 날짜가 이 주간 범위에 없어서 입력을 잠갔습니다.')+'</div>'
-    +'<div id="mechWeekScroll" class="mech-week-scroll"><table class="mech-week-input '+(isRefrig?'refrig-input':(mechFormType==='elecPatrol'?'patrol-input elec-patrol-input':(isMechPatrolLike(mechFormType)?'patrol-input':'')))+'" style="width:100%;min-width:'+(isRefrig?'860':(mechFormType==='elecPatrol'?'2266':(isMechPatrolLike(mechFormType)?'2400':'760')))+'px">'
+    +(isElecSingleForm(mechFormType)?'<div class="mech-active-day-guide">입력 기준일 : <b>'+esc(activeLabel)+'</b></div>':'<div class="mech-active-day-guide">오늘 입력 가능 요일 : <b>'+esc(activeLabel)+'</b> '+(activeDay>=0?'열만 선택 가능합니다.':'현재 날짜가 이 주간 범위에 없어서 입력을 잠갔습니다.')+'</div>')
+    +'<div id="mechWeekScroll" class="mech-week-scroll"><table class="mech-week-input '+(isRefrig?'refrig-input':(mechFormType==='elecPatrol'?'patrol-input elec-patrol-input':(isMechPatrolLike(mechFormType)?'patrol-input':'')))+'" style="width:100%;min-width:'+(isRefrig?'860':(mechFormType==='elecPatrol'?'2266':(isMechPatrolLike(mechFormType)?'2400':(mechFormType==='elecDaily'?'720':'760'))))+'px">'
     +tableHead+'<tbody>'
     +(isRefrig?buildRefrigInputRows(def,rec,activeDay):buildGenericInputRows(def,rec,activeDay))
     +'</tbody></table></div>';
@@ -3988,14 +4016,14 @@ function renderMechForm(){
   if(!body)return;
   if(title)title.textContent=def.title;if(desc)desc.textContent=def.desc;
   const backBtn=document.getElementById('mechFormBackBtn');
-  if(backBtn)backBtn.textContent=(mechFormType==='elecPatrol'?'← 전기메뉴':'← 기계메뉴');
+  if(backBtn)backBtn.textContent=((mechFormType==='elecPatrol'||isElecSingleForm(mechFormType))?'← 전기메뉴':'← 기계메뉴');
   const tl=document.getElementById('mechFormTabList');
   if(tl)tl.textContent='저장목록';
   const tf=document.getElementById('mechFormTabForm');
   if(tf)tf.classList.toggle('active',mechFormMode==='form');if(tl)tl.classList.toggle('active',mechFormMode==='list');
   if(mechFormMode==='list'){
     const rows=(state.mechForms||[]).filter(r=>r.type===mechFormType).sort((a,b)=>(b.start||b.date||'').localeCompare(a.start||a.date||''));
-    body.innerHTML='<div class="action-row" style="margin-bottom:10px"><button class="btn mech" onclick="setMechFormMode(\'form\')">+ 새 작성</button></div>'+(rows.length?rows.map(r=>'<div class="item mech"><div class="item-title">'+esc(r.title||def.title)+'</div><div class="meta"><span class="chip mech">'+esc(r.start||r.date||'')+' ~ '+esc(r.end||'')+'</span><span class="chip">'+(isMechPatrolLike(r.type)?esc(String(r.patrolRoom||'1')+'방재실 · '):'')+'점검자 '+esc(r.inspector||'-')+'</span></div><div class="note-text">'+esc(r.note||'')+'</div><div class="item-actions"><button class="btn sm ghost" onclick="editMechForm(\''+r.id+'\')">✏️ 수정</button><button class="btn sm ghost" onclick="makeMechPdf(\''+r.id+'\')">📄 PDF 생성</button><button class="btn sm danger" onclick="deleteMechForm(\''+r.id+'\')">삭제</button></div></div>').join(''):'<div class="empty">저장된 양식이 없습니다</div>');
+    body.innerHTML='<div class="action-row" style="margin-bottom:10px"><button class="btn mech" onclick="setMechFormMode(\'form\')">+ 새 작성</button></div>'+(rows.length?rows.map(r=>'<div class="item mech"><div class="item-title">'+esc(r.title||def.title)+'</div><div class="meta"><span class="chip mech">'+esc(isElecSingleForm(r.type)?(r.start||r.date||''):((r.start||r.date||'')+' ~ '+(r.end||'')))+'</span><span class="chip">'+(isMechPatrolLike(r.type)?esc(String(r.patrolRoom||'1')+'방재실 · '):'')+'점검자 '+esc(r.inspector||'-')+'</span></div><div class="note-text">'+esc(r.note||'')+'</div><div class="item-actions"><button class="btn sm ghost" onclick="editMechForm(\''+r.id+'\')">✏️ 수정</button><button class="btn sm ghost" onclick="makeMechPdf(\''+r.id+'\')">📄 PDF 생성</button><button class="btn sm danger" onclick="deleteMechForm(\''+r.id+'\')">삭제</button></div></div>').join(''):'<div class="empty">저장된 양식이 없습니다</div>');
     return;
   }
   let rec=editMechFormId?(state.mechForms||[]).find(r=>r.id===editMechFormId):null;
@@ -4006,11 +4034,22 @@ function renderMechForm(){
     if(rec)editMechFormId=rec.id;
   }
   if(rec && isMechPatrolLike(rec.type) && rec.patrolRoom)mechPatrolRoom=String(rec.patrolRoom);
-  const st=rec?.start||(isMechPatrolLike(mechFormType)?mechMonthStart(today()):mechWeekStart(today())), en=rec?.end||(isMechPatrolLike(mechFormType)?mechMonthEnd(st):mechAddDays(st,6));
+  const st=rec?.start||(isElecSingleForm(mechFormType)?today():(isMechPatrolLike(mechFormType)?mechMonthStart(today()):mechWeekStart(today()))), en=rec?.end||(isElecSingleForm(mechFormType)?st:(isMechPatrolLike(mechFormType)?mechMonthEnd(st):mechAddDays(st,6))); 
+  const inspectorDefault=(mechFormType==='elecPatrol'?((rec&&rec.inspectors&&rec.inspectors[mechActiveDayIndexFor(mechFormType,st)])||elecWorkersForDate(mechInputDays(mechFormType,st)[mechActiveDayIndexFor(mechFormType,st)]?.dateStr||today())):mechInspectorForDay(rec, mechActiveDayIndexFor(mechFormType,st)))||rec?.inspector||'';
   const approvalInputs=(mechFormType==='refrig')?
-    '<div class="grid2"><div class="field"><label>안전관리 총괄자</label><input class="inp" id="mfApp1" value="'+esc(rec?.approvals?.app1||'')+'" placeholder="성명 또는 전결"></div><div class="field"><label>안전관리 부총괄자</label><input class="inp" id="mfApp2" value="'+esc(rec?.approvals?.app2||'')+'" placeholder="성명 또는 전결"></div></div>'+    '<div class="grid2"><div class="field"><label>안전관리 책임자</label><input class="inp" id="mfApp3" value="'+esc(rec?.approvals?.app3||'')+'" placeholder="성명 또는 전결"></div><div class="field"><label>안전관리원</label><input class="inp" id="mfApp4" value="'+esc(rec?.approvals?.app4||rec?.manager||'')+'" placeholder="성명 또는 전결"></div></div>' : (isMechPatrolLike(mechFormType)?'<div class="grid2"><div class="field"><label>'+(mechFormType==='elecPatrol'?'대리':'담당')+'</label><input class="inp" id="mfApp1" value="'+esc(rec?.approvals?.app1||'')+'"></div><div class="field"><label>파트장</label><input class="inp" id="mfApp2" value="'+esc(rec?.approvals?.app2||'')+'"></div></div><div class="field"><label>팀장</label><input class="inp" id="mfApp3" value="'+esc(rec?.approvals?.app3||'')+'"></div>':'');
-  const managerOrRoom=isMechPatrolLike(mechFormType)?mechPatrolRoomSelectorHtml(rec?.patrolRoom||mechPatrolRoom):'<div class="field"><label>작성/관리원</label><input class="inp" id="mfManager" value="'+esc(rec?.manager||'')+'" placeholder="관리원"></div>';
-  body.innerHTML='<div class="grid2"><div class="field"><label>시작일(순찰은 월 기준)</label><input class="inp" type="date" id="mfStart" value="'+esc(st)+'" onchange="if(isMechPatrolLike(mechFormType)){this.value=mechMonthStart(this.value);document.getElementById(\'mfEnd\').value=mechMonthEnd(this.value)}else{document.getElementById(\'mfEnd\').value=mechAddDays(this.value,6)}"></div><div class="field"><label>종료일</label><input class="inp" type="date" id="mfEnd" value="'+esc(en)+'"></div></div>'+    '<div class="grid2"><div class="field"><label>점검자</label><input class="inp" id="mfInspector" value="'+esc((mechFormType==='elecPatrol'?((rec&&rec.inspectors&&rec.inspectors[mechActiveDayIndexFor(mechFormType,st)])||elecWorkersForDate(mechInputDays(mechFormType,st)[mechActiveDayIndexFor(mechFormType,st)]?.dateStr||today())):mechInspectorForDay(rec, mechActiveDayIndexFor(mechFormType,st)))||rec?.inspector||'')+'" placeholder="점검자"></div>'+managerOrRoom+'</div>'+approvalInputs+    mechFormRows(def,rec)+'<div class="field" style="margin-top:10px"><label>점검자 의견 / 특이사항</label><textarea class="ta" id="mfNote" placeholder="특이사항 입력">'+esc(rec?.note||'')+'</textarea></div><div class="action-row"><button class="btn mech" onclick="saveMechForm()">'+(rec?'수정 저장':'저장')+'</button><button class="btn ghost" onclick="previewCurrentMechPrint()">미리보기</button><button class="btn mech" onclick="downloadMechPdfFromCurrent()">PDF 생성</button><button class="btn ghost" onclick="setMechFormMode(\'list\')">목록</button></div><div id="mechPrintPreview"></div>';
+    '<div class="grid2"><div class="field"><label>안전관리 총괄자</label><input class="inp" id="mfApp1" value="'+esc(rec?.approvals?.app1||'')+'" placeholder="성명 또는 전결"></div><div class="field"><label>안전관리 부총괄자</label><input class="inp" id="mfApp2" value="'+esc(rec?.approvals?.app2||'')+'" placeholder="성명 또는 전결"></div></div>'+    '<div class="grid2"><div class="field"><label>안전관리 책임자</label><input class="inp" id="mfApp3" value="'+esc(rec?.approvals?.app3||'')+'" placeholder="성명 또는 전결"></div><div class="field"><label>안전관리원</label><input class="inp" id="mfApp4" value="'+esc(rec?.approvals?.app4||rec?.manager||'')+'" placeholder="성명 또는 전결"></div></div>'
+    : (mechFormType==='elecDaily'
+      ? '<input type="hidden" id="mfApp1" value="'+esc(rec?.approvals?.app1||inspectorDefault)+'"><div class="grid2"><div class="field"><label>파트장</label><input class="inp" id="mfApp2" value="'+esc(rec?.approvals?.app2||'')+'"></div><div class="field"><label>팀장</label><input class="inp" id="mfApp3" value="'+esc(rec?.approvals?.app3||'')+'"></div></div>'
+      : ((isMechPatrolLike(mechFormType)||isElecSingleForm(mechFormType))?'<div class="grid2"><div class="field"><label>'+(mechFormType==='elecPatrol'?'대리':'담당')+'</label><input class="inp" id="mfApp1" value="'+esc(rec?.approvals?.app1||(isElecSingleForm(mechFormType)?inspectorDefault:''))+'"></div><div class="field"><label>파트장</label><input class="inp" id="mfApp2" value="'+esc(rec?.approvals?.app2||'')+'"></div></div><div class="field"><label>팀장</label><input class="inp" id="mfApp3" value="'+esc(rec?.approvals?.app3||'')+'"></div>':''));
+  const managerOrRoom=isMechPatrolLike(mechFormType)?mechPatrolRoomSelectorHtml(rec?.patrolRoom||mechPatrolRoom):(isElecSingleForm(mechFormType)?'':'<div class="field"><label>작성/관리원</label><input class="inp" id="mfManager" value="'+esc(rec?.manager||'')+'" placeholder="관리원"></div>'); 
+  const dateBlock=isElecSingleForm(mechFormType)
+    ? '<div class="grid2"><div class="field"><label>점검일</label><input class="inp" type="date" id="mfStart" value="'+esc(st)+'" onchange="var e=document.getElementById(\'mfEnd\');if(e)e.value=this.value"></div><input type="hidden" id="mfEnd" value="'+esc(st)+'"></div>'
+    : '<div class="grid2"><div class="field"><label>시작일(순찰은 월 기준)</label><input class="inp" type="date" id="mfStart" value="'+esc(st)+'" onchange="if(isMechPatrolLike(mechFormType)){this.value=mechMonthStart(this.value);document.getElementById(\'mfEnd\').value=mechMonthEnd(this.value)}else{document.getElementById(\'mfEnd\').value=mechAddDays(this.value,6)}"></div><div class="field"><label>종료일</label><input class="inp" type="date" id="mfEnd" value="'+esc(en)+'"></div></div>';
+  const inspectorBlock='<div class="field"><label>점검자</label><input class="inp" id="mfInspector" value="'+esc(inspectorDefault)+'" placeholder="점검자" oninput="var a=document.getElementById(\'mfApp1\');if(a)a.value=this.value"></div>';
+  const topFields=(mechFormType==='elecDaily')
+    ? '<div class="grid2">'+inspectorBlock+'<div></div></div>'
+    : '<div class="grid2">'+inspectorBlock+managerOrRoom+'</div>';
+  body.innerHTML=dateBlock+topFields+approvalInputs+    mechFormRows(def,rec)+'<div class="field" style="margin-top:10px"><label>점검자 의견 / 특이사항</label><textarea class="ta" id="mfNote" placeholder="특이사항 입력">'+esc(rec?.note||'')+'</textarea></div><div class="action-row"><button class="btn mech" onclick="saveMechForm()">'+(rec?'수정 저장':'저장')+'</button><button class="btn ghost" onclick="previewCurrentMechPrint()">미리보기</button><button class="btn mech" onclick="downloadMechPdfFromCurrent()">PDF 생성</button><button class="btn ghost" onclick="setMechFormMode(\'list\')">목록</button></div><div id="mechPrintPreview"></div>';
   if(isMechPatrolLike(mechFormType))mechScrollToActiveDay();
 }
 window.saveMechForm=async function(){
@@ -4020,7 +4059,7 @@ window.saveMechForm=async function(){
   const startVal=document.getElementById('mfStart')?.value||today();
   const dayListForSave=mechInputDays(mechFormType,startVal);
   const saveRoom=String(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1');
-  def.items.forEach((it,idx)=>{dayListForSave.forEach((__,d)=>{let v=document.getElementById('mfR_'+idx+'_'+d)?.value||(it[4]?'/':'');if(mechFormType==='elecPatrol')v=normalizeElecPatrolMarkForRoom(v,saveRoom);results[idx+'_'+d]=v;});remarks[idx]=document.getElementById('mfB_'+idx)?.value||it[3]||'';});
+  def.items.forEach((it,idx)=>{dayListForSave.forEach((__,d)=>{let v=document.getElementById('mfR_'+idx+'_'+d)?.value||(it[4]?'/':'');if(mechFormType==='elecPatrol')v=normalizeElecPatrolMarkForRoom(v,saveRoom);results[idx+'_'+d]=v;});remarks[idx]=document.getElementById('mfB_'+idx)?.value||it[3]||'';if(mechFormType==='elecExtra'){['loc','equip','findDate','content','risk','owner','actDate','actor','action','recheck','sign','photo'].forEach(k=>{remarks[idx+'_'+k]=document.getElementById('mfB_'+idx+'_'+k)?.value||'';});}});
   const activeDay=mechActiveDayIndexFor(mechFormType,startVal);
   const inspectorNow=(document.getElementById('mfInspector')?.value||'').trim();
   const pi=mechCollectPatrolInspectors(old,activeDay,inspectorNow);
@@ -4028,10 +4067,16 @@ window.saveMechForm=async function(){
   if(activeDay>=0 && inspectorNow)inspectors[activeDay]=inspectorNow;
   if(mechFormType==='elecPatrol' && activeDay>=0 && !inspectors[activeDay])inspectors[activeDay]=elecWorkersForDate(mechInputDays(mechFormType,startVal)[activeDay]?.dateStr||today());
   if(mechFormType==='elecPatrol' && activeDay>=0 && !inspectors[activeDay])inspectors[activeDay]=elecWorkersForDate(mechInputDays(mechFormType,startVal)[activeDay]?.dateStr||today());
-  const rec=Object.assign({},old||{}, {id:editMechFormId||uid(),type:mechFormType,title:def.title,date:startVal,start:startVal,end:document.getElementById('mfEnd')?.value||'',inspector:inspectorNow||old?.inspector||'',inspectors:inspectors,dayInspectors:pi.dayInspectors,nightInspectors:pi.nightInspectors,manager:(document.getElementById('mfManager')?.value||'').trim(),patrolRoom:(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1'),approvals:{app1:(document.getElementById('mfApp1')?.value||'').trim(),app2:(document.getElementById('mfApp2')?.value||'').trim(),app3:(document.getElementById('mfApp3')?.value||'').trim(),app4:(document.getElementById('mfApp4')?.value||'').trim()},note:(document.getElementById('mfNote')?.value||'').trim(),results:results,remarks:remarks,updatedAt:new Date().toISOString()});
+  const rec=Object.assign({},old||{}, {id:editMechFormId||uid(),type:mechFormType,title:def.title,date:startVal,start:startVal,end:(isElecSingleForm(mechFormType)?startVal:(document.getElementById('mfEnd')?.value||'')),inspector:inspectorNow||old?.inspector||'',inspectors:inspectors,dayInspectors:pi.dayInspectors,nightInspectors:pi.nightInspectors,manager:(isElecSingleForm(mechFormType)?'':(document.getElementById('mfManager')?.value||'').trim()),patrolRoom:(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1'),approvals:{app1:(isElecSingleForm(mechFormType)?((document.getElementById('mfInspector')?.value||'').trim()||(document.getElementById('mfApp1')?.value||'').trim()):(document.getElementById('mfApp1')?.value||'').trim()),app2:(document.getElementById('mfApp2')?.value||'').trim(),app3:(document.getElementById('mfApp3')?.value||'').trim(),app4:(document.getElementById('mfApp4')?.value||'').trim()},note:(document.getElementById('mfNote')?.value||'').trim(),results:results,remarks:remarks,updatedAt:new Date().toISOString()});
   await dbPut(STORES.mechForms,rec);
   await loadState();
   editMechFormId=rec.id;
+  if(isElecSingleForm(mechFormType)){
+    mechFormMode='list';
+    renderMechForm();
+    showToast('저장됐습니다.');
+    return;
+  }
   const isLastDay=(today()>=(rec.end||rec.start||today()));
   if(!isLastDay){
     mechFormMode='form';
@@ -4047,6 +4092,12 @@ window.editMechForm=function(id){const r=(state.mechForms||[]).find(x=>x.id===id
 window.deleteMechForm=async function(id){if(!confirm('삭제하시겠습니까?'))return;await dbDel(STORES.mechForms,id);await loadState();renderMechForm();showToast('삭제됐습니다');};
 function approvalTable(rec){
   const a=rec.approvals||{};
+  if(rec && isElecSingleForm(rec.type)){
+    return '<table class="appr patrol-appr">'
+      +'<tr><th rowspan="2" class="appr-title">결<br>재</th><th>담당</th><th>파트장</th><th>팀장</th></tr>'
+      +'<tr><td>'+esc(a.app1||rec.inspector||'')+'</td><td>'+esc(a.app2||'')+'</td><td>'+esc(a.app3||'')+'</td></tr>'
+      +'</table>';
+  }
   if(rec && rec.type==='elecPatrol'){
     return '<table class="appr patrol-appr">'
       +'<tr><th rowspan="2" class="appr-title">결<br>재</th><th>대리</th><th>파트장</th><th>팀장</th></tr>'
@@ -4091,7 +4142,31 @@ function buildRefrigInputRows(def, rec, activeDay){
       +'<td><input class="inp" id="mfB_'+idx+'" value="'+esc(rec?.remarks?.[idx]||it[3]||'')+'" style="height:32px;padding:2px 5px;font-size:12px"></td></tr>';
   }).join('');
 }
+function elecSpan(def, idx, col){
+  const val=def.items[idx][col];
+  if(idx>0 && def.items[idx-1][col]===val)return 0;
+  let n=1;
+  for(let i=idx+1;i<def.items.length;i++){if(def.items[i][col]===val)n++;else break;}
+  return n;
+}
+function buildElecDailyInputRows(def, rec){
+  return def.items.map((it,idx)=>{
+    const isp=elecSpan(def,idx,1);
+    return '<tr>'
+      +(isp?'<td class="grp" rowspan="'+isp+'">'+esc(it[1])+'</td>':'')
+      +'<td class="left">'+esc(it[2])+'</td>'
+      +'<td>'+mechMarkControl('mfR_'+idx+'_0',mechResultCellValue(rec,idx,0),false)+'</td>'
+      +'<td><input class="inp" id="mfB_'+idx+'" value="'+esc(rec?.remarks?.[idx]||'')+'" style="height:32px;padding:2px 5px;font-size:12px"></td></tr>';
+  }).join('');
+}
 function buildGenericInputRows(def, rec, activeDay){
+  if(mechFormType==='elecDaily'){
+    return buildElecDailyInputRows(def,rec);
+  }
+  if(mechFormType==='elecExtra'){
+    const keys=['loc','equip','findDate','content','risk','owner','actDate','actor','action','recheck','sign','photo'];
+    return def.items.map((it,idx)=>'<tr><td>'+esc(idx+1)+'</td>'+keys.slice(0,9).map(k=>'<td><input class="inp" id="mfB_'+idx+'_'+k+'" value="'+esc(rec?.remarks?.[idx+'_'+k]||'')+'" style="height:30px;padding:2px 4px;font-size:11px"></td>').join('')+'<td>'+mechMarkControl('mfR_'+idx+'_0',mechResultCellValue(rec,idx,0),false)+'</td>'+keys.slice(9).map(k=>'<td><input class="inp" id="mfB_'+idx+'_'+k+'" value="'+esc(rec?.remarks?.[idx+'_'+k]||'')+'" style="height:30px;padding:2px 4px;font-size:11px"></td>').join('')+'</tr>').join('');
+  }
   const isPatrol=(isMechPatrolLike(mechFormType));
   const daysForRows=mechInputDays(mechFormType,rec?.start||rec?.date||today());
   if(mechFormType==='elecPatrol'){
@@ -4184,8 +4259,42 @@ function buildRefrigPrintHtml(rec, def, days){
     +'&nbsp;&nbsp;&nbsp;&nbsp;5 표기방법 월/일, 적합○ ,부적합 ×, 수리요함△,'
     +'</div><div class="refrig-footer">고압가스 냉동제조시설 안전관리규정 (2019.12.04. 표준모델 개정)</div></div>';
 }
+
+function elecPrintSpan(def, idx, col){
+  const val=def.items[idx][col];
+  if(idx>0 && def.items[idx-1][col]===val)return 0;
+  let n=1;
+  for(let i=idx+1;i<def.items.length;i++){if(def.items[i][col]===val)n++;else break;}
+  return n;
+}
+function buildElecDailyPrintHtml(rec, def){
+  const d=new Date(rec.start||rec.date||today()); const y=d.getFullYear(), m=d.getMonth()+1, da=d.getDate();
+  const rows=def.items.map((it,idx)=>{
+    const isp=elecPrintSpan(def,idx,1);
+    return '<tr>'
+      +(isp?'<td class="item" rowspan="'+isp+'">'+esc(it[1])+'</td>':'')
+      +'<td class="check">'+esc(it[2])+'</td>'
+      +'<td class="res">'+esc(rec.results?.[idx+'_0']||'')+'</td>'
+      +'<td class="remark">'+esc(rec.remarks?.[idx]||'')+'</td></tr>';
+  }).join('');
+  return '<div class="mech-print-sheet elecDaily excel-fire-log">'
+    +'<div class="excel-title-area"><div class="excel-title">방화 업무 일지</div>'+approvalTable(rec)+'</div>'
+    +'<div class="excel-period">점검일 : '+esc(y)+' &nbsp; 년&nbsp;&nbsp;&nbsp; '+esc(m)+' 월&nbsp;&nbsp;&nbsp; '+esc(da)+' 일&nbsp;&nbsp;&nbsp; 요일&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 점검자 : '+esc(rec.inspector||'')+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 범례 (○: 양호 / △: 보통 / X: 불량)</div>'
+    +'<table class="excel-fire-table"><colgroup><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup><thead><tr><th>구분</th><th>점검사항</th><th>점검결과</th><th>비고</th></tr></thead><tbody>'+rows+'<tr><td class="vgrp special" rowspan="5">특\n이\n사\n항</td><td class="special-text" colspan="3" rowspan="5">'+esc(rec.note||'')+'</td></tr><tr></tr><tr></tr><tr></tr><tr></tr></tbody></table></div>';
+}
+function buildElecExtraPrintHtml(rec, def){
+  const d=new Date(rec.start||rec.date||today()); const y=d.getFullYear(), m=d.getMonth()+1, da=d.getDate();
+  const r=rec.remarks||{};
+  const rows=Array.from({length:13},(_,idx)=>'<tr><td>'+esc(idx+1)+'</td><td>'+esc(r[idx+'_loc']||'')+'</td><td>'+esc(r[idx+'_equip']||'')+'</td><td colspan="4"></td><td colspan="3"></td><td colspan="3"></td><td colspan="6">'+esc(r[idx+'_photo']||'')+'</td></tr>').join('');
+  return '<div class="mech-print-sheet elecExtra excel-extra-log">'
+    +'<div class="extra-title-area"><div class="extra-title">전기파트 추가 출력물</div>'+approvalTable(rec)+'</div>'
+    +'<div class="extra-period">점검일 : '+esc(y)+' 년&nbsp;&nbsp;&nbsp; 월&nbsp;&nbsp;&nbsp; 일&nbsp;&nbsp;&nbsp; 요일</div>'
+    +'<table class="excel-extra-table"><colgroup><col class="no"><col class="loc"><col class="equip"><col span="4" class="issue"><col span="3" class="action"><col span="3" class="confirm"><col span="6" class="photo"></colgroup><thead><tr><th rowspan="2">No</th><th rowspan="2">점검위치</th><th rowspan="2">설비/항목</th><th colspan="4">이상내용</th><th colspan="3">조치내용</th><th colspan="3">확인결과</th><th colspan="6">비고/사진번호</th></tr><tr><th>발견일</th><th>내용</th><th>위험도</th><th>담당</th><th>조치일</th><th>조치자</th><th>내용</th><th>완료</th><th>재확인</th><th>서명</th><th></th><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>'+rows+'<tr class="gap"><td colspan="19"></td></tr><tr class="op"><td colspan="3">종합의견</td><td colspan="16">'+esc(rec.note||'')+'</td></tr><tr class="plan"><td colspan="3">특이사항 및 조치계획</td><td colspan="16"></td></tr></tbody></table></div>';
+}
 function buildMechPrintHtml(rec){
   const def=MECH_FORM_DEFS[rec.type]||MECH_FORM_DEFS.gas;
+  if(rec.type==='elecDaily')return buildElecDailyPrintHtml(rec,def);
+  if(rec.type==='elecExtra')return buildElecExtraPrintHtml(rec,def);
   const title=mechCleanTitle(def.title);
   const days=mechInputDays(rec.type,rec.start||rec.date||today());
   const rows=buildMechPrintRows(def,rec,days);
@@ -4208,20 +4317,22 @@ function buildMechPrintHtml(rec){
   const elecNote = rec.type==='elecPatrol' ? '<div class="notes">[범례] 양호: ○ , 불량: 점검중 불량시 해당항목에 해당동 '+elecPatrolRoomMarks(rec.patrolRoom||'1').filter(v=>v!=='○').join(',')+'(해당동)를 표기하십시오</div>' : notes;
   return '<div class="mech-print-sheet '+esc(rec.type)+'"><div class="print-top"><div><h1>'+esc(printTitle)+'</h1><div class="period">'+(isMechPatrolLike(rec.type)?esc((new Date(rec.start||today()).getFullYear())+'년 '+(new Date(rec.start||today()).getMonth()+1)+'월'):('2026년&nbsp;&nbsp; '+esc(mechFmtMD(rec.start))+' &nbsp;~&nbsp; '+esc(mechFmtMD(rec.end))))+'</div></div>'+(isMechPatrolLike(rec.type)?approvalTable(rec):'')+'</div><table class="main"><thead><tr>'+headCols+'</tr></thead><tbody>'+rows+inspectorRows+'</tbody></table><div class="opinion"><b>점검자 의견</b><br>'+esc(rec.note||'')+'</div>'+elecNote+'</div>';
 }
-function mechPrintStyle(){return '<style>@page{size:A4 portrait;margin:3mm} @page patrolPage{size:A4 landscape;margin:3mm}body{font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;margin:0;background:#fff;color:#000}.mech-print-sheet{width:204mm;min-height:291mm;margin:0 auto;color:#000;box-sizing:border-box}.print-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;width:100%;box-sizing:border-box}.print-top .appr{margin-left:auto;flex:0 0 auto}.mech-print-sheet h1{display:inline-block;border:1px solid #000;padding:7px 16px;margin:0 0 12px;font-size:24px;font-weight:500}.period{font-size:14px;margin:4px 0 10px 6px}.appr{border-collapse:collapse;font-size:10px;width:82mm}.appr th,.appr td{border:1px solid #000;height:8mm;text-align:center;padding:1px}.appr th{width:22mm;font-weight:400}.main{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}.main th,.main td{border:1px solid #000;padding:4px 3px;text-align:center;vertical-align:middle;height:23px}.main th{font-weight:500;background:#f5f5f5}.main .left{text-align:left;white-space:pre-line}.main .grp{font-weight:600;white-space:pre-line}.main .day{width:8mm}.main .day span{font-size:9px}.main .res{font-size:15px;font-weight:700}.main .sign{font-size:12px;line-height:1.05}.vertical-sign{font-size:11px;line-height:1.05;word-break:keep-all}.opinion{border:1px solid #000;border-top:none;min-height:28mm;padding:6px;font-size:11px}.blank-box{border:1px solid #000;border-top:none;height:82mm;padding:6px;box-sizing:border-box;font-size:11px;line-height:1.55}.special-title{font-weight:700;margin-bottom:4px}.special-text{white-space:pre-wrap;text-align:left}.notes{font-size:10px;line-height:1.5;margin-top:6px}.gas h1{font-size:25px;margin-bottom:12px}.gas .period{margin-bottom:12px}.gas-main{font-size:10px}.gas-main th,.gas-main td{height:10.8mm;padding:2px 2px}.gas-main th{height:9mm}.gas-main .day{width:7.2mm}.gas-main .left{font-size:9.5px;line-height:1.25}.gas-main .grp{font-size:10px}.gas-main .res{font-size:16px}.gas-main .sign{height:18mm}.patrol,.elecPatrol{page:patrolPage;width:286mm;min-height:199mm}.patrol .main,.elecPatrol .main{font-size:7.2px}.elecPatrol .main{font-size:8.8px}.patrol .main th,.patrol .main td,.elecPatrol .main th,.elecPatrol .main td{padding:2px 1px;height:18px}.elecPatrol .main th,.elecPatrol .main td{height:19px}.patrol .main .day{width:6.6mm}.elecPatrol .main .day{width:5.2mm}.patrol .main .left,.elecPatrol .main .left{font-size:7.3px}.elecPatrol .main .left{font-size:8.8px;line-height:1.18}.patrol .appr{width:82mm;font-size:9px}.elecPatrol .appr{width:82mm;font-size:10px}.patrol-appr{border-collapse:collapse;width:82mm!important;font-size:10px!important}.patrol-appr th,.patrol-appr td{border:1px solid #000;text-align:center;height:9mm;padding:1px}.patrol-appr .appr-title{width:10mm;font-weight:400}.patrol-appr th:not(.appr-title){width:24mm;font-weight:400}.patrol-sign{font-size:7.8px!important;line-height:1.18!important;white-space:pre-line;word-break:keep-all}.elecPatrol h1{font-size:22px;white-space:nowrap}.elecPatrol .opinion,.elecPatrol .notes{width:100%;box-sizing:border-box}.patrol .same-group-open,.elecPatrol .same-group-open,.patrol .same-item-open,.elecPatrol .same-item-open{border-bottom-color:transparent!important}.patrol .same-group-cont,.elecPatrol .same-group-cont,.patrol .same-item-cont,.elecPatrol .same-item-cont{border-top-color:transparent!important;color:transparent!important}.refrig{width:196mm;min-height:286mm;padding:1.5mm 0 0}.refrig-annex{font-size:10px;margin:0 0 8mm 0}.refrig-layout-top{display:grid;grid-template-columns:62mm 1fr 96mm;align-items:start;margin-bottom:2mm}.refrig-title{grid-column:1/3;text-align:center;padding-top:22mm}.refrig h1{border:none;display:block;font-size:17px;letter-spacing:.2px;margin:0 0 6mm;padding:0;font-weight:400;white-space:nowrap}.refrig .year{font-size:15px}.refrig-appr{grid-column:3;width:96mm;font-size:8.7px;border-collapse:collapse}.refrig-appr th,.refrig-appr td{border:1px solid #000;height:7.4mm;padding:0;text-align:center}.refrig-appr th{width:24mm;font-weight:400;background:#f7f7f7}.refrig-main{font-size:7.8px;table-layout:fixed}.refrig-main col.c-num{width:8mm}.refrig-main col.c-item{width:23mm}.refrig-main col.c-content{width:67mm}.refrig-main col.c-day{width:10mm}.refrig-main col.c-remark{width:28mm}.refrig-main th,.refrig-main td{height:6.4mm;padding:.8px 1.5px}.refrig-main th{background:#fff;font-weight:400}.refrig-main .left{text-align:left;font-size:7.6px;line-height:1.16;white-space:pre-line;word-break:keep-all}.refrig-main .grp{font-size:8px;line-height:1.12;font-weight:400;white-space:pre-line}.refrig-main .num{font-size:8px}.refrig-main .r-item{font-size:7.8px}.refrig-main .day span{font-size:7.6px}.refrig-main .res{font-size:12px;font-weight:400}.diag-cell{background-image:linear-gradient(135deg,transparent 49%,#000 50%,transparent 51%)}.refrig-main .opinion-title{height:12mm;font-size:8px}.refrig-main .opinion-cell{text-align:left;white-space:pre-wrap}.refrig-notes{font-size:8.2px;line-height:1.36;margin-top:1.5mm}.refrig-footer{font-size:8.5px;margin-top:4mm}</style>';}
+function mechPrintStyle(){return `<style>@page{size:A4 portrait;margin:3mm} @page patrolPage{size:A4 landscape;margin:3mm}body{font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;margin:0;background:#fff;color:#000}.mech-print-sheet{width:204mm;min-height:291mm;margin:0 auto;color:#000;box-sizing:border-box}.print-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;width:100%;box-sizing:border-box}.print-top .appr{margin-left:auto;flex:0 0 auto}.mech-print-sheet h1{display:inline-block;border:1px solid #000;padding:7px 16px;margin:0 0 12px;font-size:24px;font-weight:500}.period{font-size:14px;margin:4px 0 10px 6px}.appr{border-collapse:collapse;font-size:10px;width:82mm}.appr th,.appr td{border:1px solid #000;height:8mm;text-align:center;padding:1px}.appr th{width:22mm;font-weight:400}.main{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}.main th,.main td{border:1px solid #000;padding:4px 3px;text-align:center;vertical-align:middle;height:23px}.main th{font-weight:500;background:#f5f5f5}.main .left{text-align:left;white-space:pre-line}.main .grp{font-weight:600;white-space:pre-line}.main .day{width:8mm}.main .day span{font-size:9px}.main .res{font-size:15px;font-weight:700}.main .sign{font-size:12px;line-height:1.05}.vertical-sign{font-size:11px;line-height:1.05;word-break:keep-all}.opinion{border:1px solid #000;border-top:none;min-height:28mm;padding:6px;font-size:11px}.blank-box{border:1px solid #000;border-top:none;height:82mm;padding:6px;box-sizing:border-box;font-size:11px;line-height:1.55}.special-title{font-weight:700;margin-bottom:4px}.special-text{white-space:pre-wrap;text-align:left}.notes{font-size:10px;line-height:1.5;margin-top:6px}.gas h1{font-size:25px;margin-bottom:12px}.gas .period{margin-bottom:12px}.gas-main{font-size:10px}.gas-main th,.gas-main td{height:10.8mm;padding:2px 2px}.gas-main th{height:9mm}.gas-main .day{width:7.2mm}.gas-main .left{font-size:9.5px;line-height:1.25}.gas-main .grp{font-size:10px}.gas-main .res{font-size:16px}.gas-main .sign{height:18mm}.patrol,.elecPatrol{page:patrolPage;width:286mm;min-height:199mm}.patrol .main,.elecPatrol .main{font-size:7.2px}.elecPatrol .main{font-size:8.8px}.patrol .main th,.patrol .main td,.elecPatrol .main th,.elecPatrol .main td{padding:2px 1px;height:18px}.elecPatrol .main th,.elecPatrol .main td{height:19px}.patrol .main .day{width:6.6mm}.elecPatrol .main .day{width:5.2mm}.patrol .main .left,.elecPatrol .main .left{font-size:7.3px}.elecPatrol .main .left{font-size:8.8px;line-height:1.18}.patrol .appr{width:82mm;font-size:9px}.elecPatrol .appr{width:82mm;font-size:10px}.patrol-appr{border-collapse:collapse;width:82mm!important;font-size:10px!important}.patrol-appr th,.patrol-appr td{border:1px solid #000;text-align:center;height:9mm;padding:1px}.patrol-appr .appr-title{width:10mm;font-weight:400}.patrol-appr th:not(.appr-title){width:24mm;font-weight:400}.patrol-sign{font-size:7.8px!important;line-height:1.18!important;white-space:pre-line;word-break:keep-all}.elecPatrol h1{font-size:22px;white-space:nowrap}.elecPatrol .opinion,.elecPatrol .notes{width:100%;box-sizing:border-box}.elecDaily,.elecExtra{page:patrolPage;width:286mm;min-height:199mm}.elecDaily h1,.elecExtra h1{font-size:22px;white-space:nowrap}.elecDaily .main,.elecExtra .main{font-size:8.2px}.elecDaily .main th,.elecDaily .main td,.elecExtra .main th,.elecExtra .main td{height:7.5mm;padding:2px 3px}.elecDaily .main .left,.elecExtra .main .left{font-size:8.2px;line-height:1.2}.elecDaily .main .res,.elecExtra .main .res{font-size:12px}.elecExtra .main th,.elecExtra .main td{font-size:7.6px;padding:1px 2px;height:7mm}.extra-plan{min-height:18mm}.elecDaily .opinion,.elecExtra .opinion{min-height:18mm}.patrol .same-group-open,.elecPatrol .same-group-open,.patrol .same-item-open,.elecPatrol .same-item-open{border-bottom-color:transparent!important}.patrol .same-group-cont,.elecPatrol .same-group-cont,.patrol .same-item-cont,.elecPatrol .same-item-cont{border-top-color:transparent!important;color:transparent!important}.refrig{width:196mm;min-height:286mm;padding:1.5mm 0 0}.refrig-annex{font-size:10px;margin:0 0 8mm 0}.refrig-layout-top{display:grid;grid-template-columns:62mm 1fr 96mm;align-items:start;margin-bottom:2mm}.refrig-title{grid-column:1/3;text-align:center;padding-top:22mm}.refrig h1{border:none;display:block;font-size:17px;letter-spacing:.2px;margin:0 0 6mm;padding:0;font-weight:400;white-space:nowrap}.refrig .year{font-size:15px}.refrig-appr{grid-column:3;width:96mm;font-size:8.7px;border-collapse:collapse}.refrig-appr th,.refrig-appr td{border:1px solid #000;height:7.4mm;padding:0;text-align:center}.refrig-appr th{width:24mm;font-weight:400;background:#f7f7f7}.refrig-main{font-size:7.8px;table-layout:fixed}.refrig-main col.c-num{width:8mm}.refrig-main col.c-item{width:23mm}.refrig-main col.c-content{width:67mm}.refrig-main col.c-day{width:10mm}.refrig-main col.c-remark{width:28mm}.refrig-main th,.refrig-main td{height:6.4mm;padding:.8px 1.5px}.refrig-main th{background:#fff;font-weight:400}.refrig-main .left{text-align:left;font-size:7.6px;line-height:1.16;white-space:pre-line;word-break:keep-all}.refrig-main .grp{font-size:8px;line-height:1.12;font-weight:400;white-space:pre-line}.refrig-main .num{font-size:8px}.refrig-main .r-item{font-size:7.8px}.refrig-main .day span{font-size:7.6px}.refrig-main .res{font-size:12px;font-weight:400}.diag-cell{background-image:linear-gradient(135deg,transparent 49%,#000 50%,transparent 51%)}.refrig-main .opinion-title{height:12mm;font-size:8px}.refrig-main .opinion-cell{text-align:left;white-space:pre-wrap}.refrig-notes{font-size:8.2px;line-height:1.36;margin-top:1.5mm}.refrig-footer{font-size:8.5px;margin-top:4mm}
+.excel-fire-log{page:portraitPage!important;width:196mm!important;min-height:286mm!important;padding:0!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif}.excel-fire-log .excel-title-area{display:grid;grid-template-columns:1fr 96mm;align-items:start}.excel-fire-log .excel-title{font-size:25px;font-weight:700;text-align:left;padding:6mm 0 0 9mm;height:34mm;box-sizing:border-box}.excel-fire-log .appr{width:96mm!important;margin:0 0 0 auto;border-collapse:collapse;font-size:11px}.excel-fire-log .appr th,.excel-fire-log .appr td{height:10mm;border:1px solid #000;padding:0;text-align:center}.excel-fire-log .appr .appr-title{width:13mm;font-weight:400}.excel-fire-log .excel-period{border:1px solid #000;height:8mm;line-height:8mm;font-size:11px;padding-left:2mm;box-sizing:border-box}.excel-fire-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px}.excel-fire-table col.c1{width:13mm}.excel-fire-table col.c2{width:37mm}.excel-fire-table col.c3{width:101mm}.excel-fire-table col.c4{width:22mm}.excel-fire-table col.c5{width:23mm}.excel-fire-table th,.excel-fire-table td{border:1px solid #000;text-align:center;vertical-align:middle;padding:0 2mm;height:10.85mm;background:#fff}.excel-fire-table th{font-weight:700;height:11mm}.excel-fire-table .vgrp{font-size:14px;font-weight:700;white-space:pre-line;line-height:1.42}.excel-fire-table .item{font-size:11.5px}.excel-fire-table .check{text-align:left;font-size:11.2px;line-height:1.25}.excel-fire-table .res{font-size:15px;font-weight:700}.excel-fire-table .remark{text-align:left}.excel-fire-table .special{height:33mm}.excel-fire-table .special-text{text-align:left;vertical-align:top;height:33mm;white-space:pre-wrap}.excel-extra-log{page:patrolPage!important;width:286mm!important;min-height:199mm!important;padding:0!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif}.excel-extra-log .extra-title-area{display:grid;grid-template-columns:1fr 74mm;align-items:start}.excel-extra-log .extra-title{font-size:22px;font-weight:700;text-align:left;padding:3mm 0 0 7mm;height:23mm;box-sizing:border-box}.excel-extra-log .appr{width:74mm!important;margin:0 0 0 auto;border-collapse:collapse;font-size:8px}.excel-extra-log .appr th,.excel-extra-log .appr td{height:8mm;border:1px solid #000;padding:0;text-align:center}.excel-extra-log .appr .appr-title{width:12mm;font-weight:400}.excel-extra-log .extra-period{border:1px solid #000;height:6.5mm;line-height:6.5mm;font-size:8.2px;padding-left:1mm;box-sizing:border-box}.excel-extra-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.7px}.excel-extra-table col.no{width:8mm}.excel-extra-table col.loc{width:18mm}.excel-extra-table col.equip{width:23mm}.excel-extra-table col.issue{width:15.5mm}.excel-extra-table col.action{width:18mm}.excel-extra-table col.confirm{width:18mm}.excel-extra-table col.photo{width:13mm}.excel-extra-table th,.excel-extra-table td{border:1px solid #000;text-align:center;vertical-align:middle;background:#fff;height:7mm;padding:0}.excel-extra-table th{font-weight:400}.excel-extra-table tbody td{height:7mm}.excel-extra-table .gap td{height:6mm;border-left:none;border-right:none}.excel-extra-table .op td{height:7mm}.excel-extra-table .plan td{height:21mm}.mech-week-input .elec-vgrp{white-space:pre-line;line-height:1.3;font-size:16px;font-weight:900;text-align:center}@page portraitPage{size:A4 portrait;margin:6mm}
+</style>`;}
 function collectCurrentMechRecord(){
   const def=MECH_FORM_DEFS[mechFormType]||MECH_FORM_DEFS.gas;const results={},remarks={};
   const startVal=document.getElementById('mfStart')?.value||today();
   const dayListForSave=mechInputDays(mechFormType,startVal);
   const saveRoom=String(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1');
-  def.items.forEach((it,idx)=>{dayListForSave.forEach((__,d)=>{let v=document.getElementById('mfR_'+idx+'_'+d)?.value||(it[4]?'/':'');if(mechFormType==='elecPatrol')v=normalizeElecPatrolMarkForRoom(v,saveRoom);results[idx+'_'+d]=v;});remarks[idx]=document.getElementById('mfB_'+idx)?.value||it[3]||'';});
+  def.items.forEach((it,idx)=>{dayListForSave.forEach((__,d)=>{let v=document.getElementById('mfR_'+idx+'_'+d)?.value||(it[4]?'/':'');if(mechFormType==='elecPatrol')v=normalizeElecPatrolMarkForRoom(v,saveRoom);results[idx+'_'+d]=v;});remarks[idx]=document.getElementById('mfB_'+idx)?.value||it[3]||'';if(mechFormType==='elecExtra'){['loc','equip','findDate','content','risk','owner','actDate','actor','action','recheck','sign','photo'].forEach(k=>{remarks[idx+'_'+k]=document.getElementById('mfB_'+idx+'_'+k)?.value||'';});}});
   const activeDay=mechActiveDayIndexFor(mechFormType,startVal);
   const inspectorNow=document.getElementById('mfInspector')?.value||'';
   const old=editMechFormId?(state.mechForms||[]).find(r=>r.id===editMechFormId):null;
   const pi=mechCollectPatrolInspectors(old,activeDay,inspectorNow);
   const inspectors=Object.assign({}, pi.dayInspectors||{});
   if(activeDay>=0 && inspectorNow)inspectors[activeDay]=inspectorNow;
-  return {type:mechFormType,title:def.title,date:startVal,start:startVal,end:document.getElementById('mfEnd')?.value||'',inspector:inspectorNow,inspectors:inspectors,dayInspectors:pi.dayInspectors,nightInspectors:pi.nightInspectors,manager:document.getElementById('mfManager')?.value||'',patrolRoom:(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1'),approvals:{app1:document.getElementById('mfApp1')?.value||'',app2:document.getElementById('mfApp2')?.value||'',app3:document.getElementById('mfApp3')?.value||'',app4:document.getElementById('mfApp4')?.value||''},note:document.getElementById('mfNote')?.value||'',results,remarks};
+  return {type:mechFormType,title:def.title,date:startVal,start:startVal,end:(isElecSingleForm(mechFormType)?startVal:(document.getElementById('mfEnd')?.value||'')),inspector:inspectorNow,inspectors:inspectors,dayInspectors:pi.dayInspectors,nightInspectors:pi.nightInspectors,manager:(isElecSingleForm(mechFormType)?'':(document.getElementById('mfManager')?.value||'')),patrolRoom:(document.getElementById('mfPatrolRoom')?.value||mechPatrolRoom||'1'),approvals:{app1:(isElecSingleForm(mechFormType)?(inspectorNow||document.getElementById('mfApp1')?.value||''):(document.getElementById('mfApp1')?.value||'')),app2:document.getElementById('mfApp2')?.value||'',app3:document.getElementById('mfApp3')?.value||'',app4:document.getElementById('mfApp4')?.value||''},note:document.getElementById('mfNote')?.value||'',results,remarks};
 }
 window.previewCurrentMechPrint=function(){
   const rec=collectCurrentMechRecord();
@@ -4233,7 +4344,7 @@ function downloadMechPdf(rec){
   const wrap=document.createElement('div');wrap.style.position='fixed';wrap.style.left='-9999px';wrap.style.top='0';wrap.style.background='#fff';wrap.innerHTML=mechPrintStyle()+buildMechPrintHtml(rec);document.body.appendChild(wrap);
   const sheet=wrap.querySelector('.mech-print-sheet');
   function done(){html2canvas(sheet,{scale:2,backgroundColor:'#fff',useCORS:true,allowTaint:true}).then(function(canvas){
-    const isPatrol=isMechPatrolLike(rec.type);const pdf=new window.jspdf.jsPDF({orientation:isPatrol?'landscape':'portrait',unit:'mm',format:'a4'});const pw=isPatrol?291:206,ph=isPatrol?204:291;const ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));const dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
+    const isPatrol=isMechLandscapeForm(rec.type);const pdf=new window.jspdf.jsPDF({orientation:isPatrol?'landscape':'portrait',unit:'mm',format:'a4'});const pw=isPatrol?291:206,ph=isPatrol?204:291;const ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));const dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
     pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',2,2,dw,dh);const blob=pdf.output('blob');const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(rec.title||'기계점검표').replace(/[\/:*?"<>|]/g,'_')+'_'+(rec.start||today())+'.pdf';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();URL.revokeObjectURL(url);wrap.remove();},2000);showToast('PDF가 생성됐습니다');
   }).catch(function(e){wrap.remove();alert('PDF 생성 오류: '+e.message);});}
   if(window.html2canvas&&window.jspdf){done();return;}
