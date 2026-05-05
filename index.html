@@ -4344,8 +4344,25 @@ function downloadMechPdf(rec){
   const wrap=document.createElement('div');wrap.style.position='fixed';wrap.style.left='-9999px';wrap.style.top='0';wrap.style.background='#fff';wrap.innerHTML=mechPrintStyle()+buildMechPrintHtml(rec);document.body.appendChild(wrap);
   const sheet=wrap.querySelector('.mech-print-sheet');
   function done(){html2canvas(sheet,{scale:2,backgroundColor:'#fff',useCORS:true,allowTaint:true}).then(function(canvas){
-    const isPatrol=isMechLandscapeForm(rec.type);const pdf=new window.jspdf.jsPDF({orientation:isPatrol?'landscape':'portrait',unit:'mm',format:'a4'});const pw=isPatrol?291:206,ph=isPatrol?204:291;const ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));const dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',2,2,dw,dh);const blob=pdf.output('blob');const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(rec.title||'기계점검표').replace(/[\/:*?"<>|]/g,'_')+'_'+(rec.start||today())+'.pdf';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();URL.revokeObjectURL(url);wrap.remove();},2000);showToast('PDF가 생성됐습니다');
+    const isPatrol=isMechLandscapeForm(rec.type);
+    const pdf=new window.jspdf.jsPDF({orientation:isPatrol?'landscape':'portrait',unit:'mm',format:'a4'});
+    const img=canvas.toDataURL('image/jpeg',0.95);
+    if(rec.type==='elecDaily'){
+      // 방화업무일지는 엑셀 A4 세로 양식 자체가 기준이므로
+      // canvas 픽셀 크기로 다시 축소하지 않고 A4 출력 영역에 고정 배치한다.
+      pdf.addImage(img,'JPEG',7,5,196,286);
+    }else if(rec.type==='elecExtra'){
+      // 추가 출력물은 A4 가로 양식 기준 고정 배치.
+      pdf.addImage(img,'JPEG',5,5,287,200);
+    }else{
+      const pageW=isPatrol?297:210, pageH=isPatrol?210:297;
+      const margin=4;
+      const maxW=pageW-(margin*2), maxH=pageH-(margin*2);
+      const ratio=Math.min(maxW/canvas.width,maxH/canvas.height);
+      const dw=canvas.width*ratio, dh=canvas.height*ratio;
+      pdf.addImage(img,'JPEG',margin,margin,dw,dh);
+    }
+    const blob=pdf.output('blob');const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(rec.title||'기계점검표').replace(/[\/:*?"<>|]/g,'_')+'_'+(rec.start||today())+'.pdf';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();URL.revokeObjectURL(url);wrap.remove();},2000);showToast('PDF가 생성됐습니다');
   }).catch(function(e){wrap.remove();alert('PDF 생성 오류: '+e.message);});}
   if(window.html2canvas&&window.jspdf){done();return;}
   loadExtScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){loadExtScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',done);});
