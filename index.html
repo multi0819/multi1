@@ -2502,8 +2502,8 @@ window.kakaoShare=async function(schedId,dateStr){
   await saveTaskLog(schedId,dateStr);
   closeModal('taskModal');
   showToast('보고서 이미지 생성 중...');
-  // 출력물 사진 배치: 가로사진은 한 줄 1장, 세로사진은 한 줄 2장
-  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'10px'});
+  // 카톡 공유용 보고 이미지는 카톡 썸네일처럼 2열을 유지하되, 캡처 배율을 높여 글자 뭉개짐을 줄임.
+  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'8px',landscapeFull:false,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff'});
   function card(label,val,color){return '<div style="background:#fff;border:1.5px solid #bfdbfe;border-radius:10px;padding:11px 13px"><div style="font-size:14px;color:#64748b;margin-bottom:3px;font-weight:600">'+label+'</div><div style="font-size:22px;font-weight:900;color:'+(color||'#111827')+'">'+val+'</div></div>';}
   var reportRows='';
   if(isRpt){
@@ -2546,9 +2546,11 @@ window.kakaoShare=async function(schedId,dateStr){
     +(modalPhotos.length?'<div class="ps"><div class="pl">현장사진 '+modalPhotos.length+'장</div>'+photoGrid+'</div>':'')
     +'<div class="ft">사무동 시설관리 · '+dateStr+' '+timeStr+'</div></body></html>';
   const safeName=((sched&&sched.name||'').replace(/[\/:*?"<>|]/g,'').slice(0,12));
-  openGeneratedReportWindow(rHtml,'점검보고_'+dateStr+'_'+safeName+'.jpg','점검보고_'+dateStr+'.html');
+  openGeneratedReportWindow(rHtml,'점검보고_'+dateStr+'_'+safeName+'.png','점검보고_'+dateStr+'.html');
 };
-/* 출력물 공통 사진 배치: 가로사진은 한 줄 1장, 세로사진은 한 줄 2장 */
+/* 출력물 공통 사진 배치
+   기본값: 가로사진 1장/줄, 세로사진 2장/줄
+   카톡 공유용: opt.landscapeFull=false 이면 가로사진도 2열 유지 */
 async function buildOutputPhotoGridHtml(photos,opt){
   opt=opt||{};
   const list=(photos||[]).filter(Boolean);
@@ -2567,7 +2569,7 @@ async function buildOutputPhotoGridHtml(photos,opt){
   const imgStyle=opt.imgStyle||'width:100%;height:auto;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)';
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:'+gap+';align-items:start;'+gridStyle+'">'
     +infos.map(function(p){
-      var span=p.landscape?'grid-column:1 / -1;':'';
+      var span=(p.landscape&&opt.landscapeFull!==false)?'grid-column:1 / -1;':'';
       return '<img src="'+p.src+'" style="'+span+imgStyle+'">';
     }).join('')+'</div>';
 }
@@ -2592,9 +2594,9 @@ function openGeneratedReportWindow(reportHtml,imageFileName,htmlFileName){
   +'const reportHtml='+JSON.stringify(reportHtml)+';const imageFileName='+JSON.stringify(imageFileName)+';const htmlFileName='+JSON.stringify(htmlFileName)+';'
   +'const f=document.getElementById("reportFrame");f.contentDocument.open();f.contentDocument.write(reportHtml);f.contentDocument.close();'
   +'function fit(){try{f.style.height=Math.max(600,f.contentDocument.body.scrollHeight)+"px";}catch(e){}}setTimeout(fit,500);setTimeout(fit,1500);'
-  +'async function makeBlob(){fit();const b=f.contentDocument.body;const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:640,height:h,windowWidth:640,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:8000});return await new Promise(r=>c.toBlob(r,"image/jpeg",0.9));}'
-  +'async function saveImage(){try{const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("이미지를 저장했습니다. 갤러리/다운로드에서 카톡으로 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}}'
-  +'async function shareImage(){try{const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/jpeg"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"점검보고"});return;}await saveImage();}catch(e){await saveImage();}}'
+  +'async function makeBlob(){fit();const b=f.contentDocument.body;const w=Math.max(b.scrollWidth,b.offsetWidth,640);const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:3,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:12000});return await new Promise(r=>c.toBlob(r,"image/png"));}'
+  +'async function saveImage(){try{const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("원본 PNG 이미지로 저장했습니다. 카톡에서 흐리면 카톡 사진 화질을 원본으로 선택해 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}}'
+  +'async function shareImage(){try{const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/png"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"점검보고"});return;}await saveImage();}catch(e){await saveImage();}}'
   +'document.getElementById("saveBtn").onclick=saveImage;document.getElementById("shareBtn").onclick=shareImage;document.getElementById("printBtn").onclick=()=>window.print();'
   +'<\/script></body></html>';
   const blob=new Blob([page],{type:'text/html;charset=utf-8'});
@@ -2705,15 +2707,15 @@ window.generateDayReport=async function(dateStr){
     if(btnArea)btnArea.style.display='none';
     try{
       await loadH2C();
-      const canvas=await html2canvas(card,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff'});
+      const canvas=await html2canvas(card,{scale:3,useCORS:true,allowTaint:true,backgroundColor:'#fff'});
       if(btnArea)btnArea.style.display='flex';
       canvas.toBlob(blob=>{
         const url=URL.createObjectURL(blob);
         const a=document.createElement('a');
-        a.href=url;a.download='일일점검보고서_'+new Date().toISOString().slice(0,10)+'.jpg';
+        a.href=url;a.download='일일점검보고서_'+new Date().toISOString().slice(0,10)+'.png';
         document.body.appendChild(a);a.click();a.remove();
         URL.revokeObjectURL(url);
-        alert('✅ 이미지가 저장되었습니다!\n갤러리에서 카톡으로 전송하세요');
+        alert('✅ 원본 PNG 이미지가 저장되었습니다!\n카톡에서 흐리면 사진 화질을 원본으로 선택해 전송하세요');
       },'image/png',0.95);
     }catch(e){
       if(btnArea)btnArea.style.display='flex';
@@ -3662,6 +3664,7 @@ function buildVocPopupHtml(mode){
     +(vocPeriod==='month'?'<input class="inp" type="month" id="vocFltMonth" value="'+monthVal+'" onchange="renderVocPopup(\'list\')" style="margin-bottom:8px">':'')
     +(vocPeriod==='day'?'<div style="display:flex;gap:6px;margin-bottom:8px"><input class="inp" type="date" id="vocFltFrom" value="'+todayVal+'" onchange="renderVocPopup(\'list\')"><input class="inp" type="date" id="vocFltTo" value="'+todayVal+'" onchange="renderVocPopup(\'list\')"></div>':'')
     +'<select class="sel" id="vocFltStatus" onchange="renderVocPopup(\'list\')" style="margin-bottom:9px"><option value="all">상태 전체</option><option value="접수">접수</option><option value="확인중">확인중</option><option value="처리중">처리중</option><option value="완료">완료</option><option value="보류">보류</option></select>'
+    +'<button class="btn mech" style="width:100%;margin-bottom:9px" onclick="downloadVocWorkLogPdf()">🖨 VOC 업무일지 PDF 출력</button>'
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:7px 10px;background:var(--surface2);border-radius:8px">VOC 총 '+items.length+'건</div>'
     +list;
 }
@@ -3705,6 +3708,107 @@ window.saveVOC=async function(){
 window.editVOC=function(id){editVocId=id;renderVocPopup('form');};
 window.deleteVOC=async function(id){if(!confirm('이 VOC를 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.'))return;await dbDel(STORES.works,id);alert('삭제되었습니다.');await loadState();showStatPopup('voc');};
 window.viewVOC=function(id){const w=state.works.find(x=>x.id===id);if(!w)return;alert('VOC 세부조회\n\n접수일: '+(w.date||'-')+'\n신청시간: '+(w.requestTime||'-')+'\n완료시간: '+(w.completeTime||'-')+'\n소요시간: '+(w.elapsedTime||'-')+'\n상태: '+(w.vocStatus||'-')+'\n유형: '+(w.vocType||w.category||'-')+'\n요청자: '+(w.requester||'-')+'\n연락처: '+(w.requesterPhone||'-')+'\n위치: '+(w.location||'-')+'\n제목: '+(w.vocTitle||w.symptom||'-')+'\n내용: '+(w.vocContent||'-')+'\n처리내용: '+(w.action||'-'));};
+
+
+/* VOC 업무일지: A4 가로 PDF 출력 */
+function vocPrintDateText(v){
+  if(!v)return '';
+  const d=new Date(v+'T00:00:00');
+  if(isNaN(d.getTime()))return v;
+  const yo=['일','월','화','수','목','금','토'][d.getDay()];
+  return d.getFullYear()+'년 '+String(d.getMonth()+1).padStart(2,'0')+'월 '+String(d.getDate()).padStart(2,'0')+'일 '+yo+'요일';
+}
+function vocSelectedDateLabel(){
+  const p=document.getElementById('vocPeriodVal')?.value||vocPeriod||'month';
+  if(p==='day'){
+    const f=document.getElementById('vocFltFrom')?.value||today();
+    const t=document.getElementById('vocFltTo')?.value||f;
+    return f===t ? vocPrintDateText(f) : (vocPrintDateText(f)+' ~ '+vocPrintDateText(t));
+  }
+  if(p==='month'){
+    const m=document.getElementById('vocFltMonth')?.value||vocMonthNow();
+    return m ? m.replace('-','년 ')+'월' : '';
+  }
+  return '전체 기간';
+}
+function vocMarkCell(w,done){
+  const vs=w.vocStatus||(w.isNormal==='Y'?'완료':'처리중');
+  return done ? (vs==='완료'?'○':'') : (vs==='완료'?'':'○');
+}
+function buildVocWorkLogPrintHtml(items){
+  const list=(items&&items.length?items:vocFilteredItems()).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const perPage=18;
+  const pages=[];
+  for(let i=0;i<Math.max(list.length,1);i+=perPage)pages.push(list.slice(i,i+perPage));
+  const total=list.length;
+  const done=list.filter(w=>(w.vocStatus||(w.isNormal==='Y'?'완료':'처리중'))==='완료').length;
+  const notDone=total-done;
+  const dateLabel=vocSelectedDateLabel();
+  const rowHtml=function(w,idx){
+    if(!w)return '<tr>'+Array.from({length:17},(_,i)=>'<td class="blank">'+(i===0?idx:'')+'</td>').join('')+'</tr>';
+    const part=(DOMAINS.find(x=>x.id===w.domain)?.label)||(w.domain||'');
+    const writer=getName(state.writers,w.writerId)||getName(state.receivers,w.writerId)||w.worker||'';
+    const req=w.vocContent||w.symptom||w.vocTitle||'';
+    return '<tr>'
+      +'<td class="num">'+idx+'</td>'
+      +'<td>'+vocMarkCell(w,true)+'</td><td>'+vocMarkCell(w,false)+'</td>'
+      +'<td></td><td></td>'
+      +'<td>'+esc(part)+'</td>'
+      +'<td>'+esc((w.date||'').slice(5))+'</td>'
+      +'<td>'+esc(w.requester||'')+'</td>'
+      +'<td>'+esc(w.requesterPhone||'')+'</td>'
+      +'<td>'+esc(writer)+'</td>'
+      +'<td class="left req">'+esc(req)+'</td>'
+      +'<td>'+esc(w.vocType||w.category||'')+'</td>'
+      +'<td>'+esc(w.requestTime||'')+'</td>'
+      +'<td>'+esc(w.completeTime||'')+'</td>'
+      +'<td>'+esc(w.elapsedTime||'')+'</td>'
+      +'<td>'+esc(writer)+'</td>'
+      +'<td class="left act">'+esc(w.action||'')+'</td>'
+      +'</tr>';
+  };
+  const style='<style>@page{size:A4 landscape;margin:5mm}body{margin:0;background:#fff;color:#000;font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif}.voc-print-sheet{width:287mm;min-height:200mm;margin:0 auto;box-sizing:border-box;padding:4mm 3mm 3mm;page-break-after:always}.voc-print-sheet:last-child{page-break-after:auto}.voc-top{display:grid;grid-template-columns:76mm 1fr 42mm;align-items:start;margin-bottom:2mm}.voc-count{border-collapse:collapse;font-size:8.5px;width:70mm;margin-top:2mm}.voc-count td{border:1px solid #333;text-align:center;height:6.2mm;padding:1px}.voc-count .a{background:#d9eaf7}.voc-count .b{background:#e2f0d9}.voc-count .p{background:#eadcf8}.voc-count .u{background:#fff2cc}.voc-title{text-align:center;font-size:18px;font-weight:700;letter-spacing:.2px;padding-top:5mm}.voc-date{text-align:right;font-size:9px;margin:2mm 0 1.5mm}.voc-appr{border-collapse:collapse;width:40mm;font-size:8px}.voc-appr th,.voc-appr td{border:1px solid #333;text-align:center;height:8mm;padding:1px}.voc-appr th{font-weight:400}.voc-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.2px}.voc-table th,.voc-table td{border:1px solid #333;text-align:center;vertical-align:middle;height:7.7mm;padding:1px 1.2px;line-height:1.12;word-break:keep-all;overflow:hidden}.voc-table th{background:#e7a4a4;font-weight:400}.voc-table .hblue{background:#d9eaf7}.voc-table .hgreen{background:#e2f0d9}.voc-table .num{width:7mm}.voc-table .left{text-align:left;white-space:pre-wrap;word-break:break-word}.voc-table .req{font-size:6.9px}.voc-table .act{font-size:6.9px}</style>';
+  const colgroup='<col style="width:7mm"><col style="width:7mm"><col style="width:7mm"><col style="width:7mm"><col style="width:7mm"><col style="width:12mm"><col style="width:11mm"><col style="width:14mm"><col style="width:20mm"><col style="width:15mm"><col style="width:66mm"><col style="width:9mm"><col style="width:9mm"><col style="width:9mm"><col style="width:10mm"><col style="width:14mm"><col style="width:53mm">';
+  return style+pages.map(function(rows,pi){
+    while(rows.length<perPage)rows.push(null);
+    return '<div class="voc-print-sheet">'
+      +'<div class="voc-top"><table class="voc-count"><tr><td></td><td>A/S</td><td>완료</td><td>'+done+'</td><td>미결</td><td>'+notDone+'</td><td>합계</td><td>'+total+'</td><td class="u" rowspan="2">'+(pi+1)+'</td></tr><tr><td></td><td>B/S</td><td>완료</td><td>0</td><td>미결</td><td>0</td><td>합계</td><td>0</td></tr></table><div class="voc-title">2BL VOC 업무일지 (업무시설)</div><table class="voc-appr"><tr><th rowspan="2">결<br>재</th><th>담 당</th><th>총 원</th></tr><tr><td></td><td></td></tr></table></div>'
+      +'<div class="voc-date">접수 일자 : '+esc(dateLabel)+'</div>'
+      +'<table class="voc-table"><colgroup>'+colgroup+'</colgroup><thead><tr><th rowspan="2">순번</th><th colspan="2" class="hblue">A/S</th><th colspan="2" class="hgreen">B/S</th><th rowspan="2">파트</th><th rowspan="2">일자</th><th rowspan="2">신청자</th><th rowspan="2">전화번호</th><th rowspan="2">접수자</th><th rowspan="2">요청사항</th><th rowspan="2">요청<br>구분</th><th rowspan="2">신청<br>시간</th><th rowspan="2">완료<br>시간</th><th rowspan="2">소요<br>시간</th><th rowspan="2">작업자</th><th rowspan="2">조치 내용</th></tr><tr><th class="hblue">완료</th><th class="hblue">미결</th><th class="hgreen">완료</th><th class="hgreen">미결</th></tr></thead><tbody>'+rows.map((w,i)=>rowHtml(w,pi*perPage+i+1)).join('')+'</tbody></table>'
+      +'</div>';
+  }).join('');
+}
+window.downloadVocWorkLogPdf=function(){
+  const items=vocFilteredItems();
+  if(!items.length&&!confirm('조회된 VOC가 없습니다. 빈 양식으로 출력하시겠습니까?'))return;
+  showToast('VOC 업무일지 PDF 생성 중...');
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;left:-10000px;top:0;background:#fff;z-index:-1';
+  wrap.innerHTML=buildVocWorkLogPrintHtml(items);
+  document.body.appendChild(wrap);
+  function done(){
+    const sheets=Array.from(wrap.querySelectorAll('.voc-print-sheet'));
+    const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    Promise.all(sheets.map(sheet=>html2canvas(sheet,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',width:sheet.offsetWidth,height:sheet.offsetHeight,windowWidth:sheet.offsetWidth}))).then(function(canvases){
+      canvases.forEach(function(canvas,i){
+        if(i)pdf.addPage('a4','landscape');
+        const pw=287,ph=200;
+        const ratio=Math.min(pw/(canvas.width/2),ph/(canvas.height/2));
+        const dw=(canvas.width/2)*ratio,dh=(canvas.height/2)*ratio;
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.96),'JPEG',5,5,dw,dh);
+      });
+      const blob=pdf.output('blob');
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download='VOC업무일지_'+(new Date().toISOString().slice(0,10))+'.pdf';
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){a.remove();URL.revokeObjectURL(url);wrap.remove();},2500);
+      showToast('VOC 업무일지 PDF가 생성됐습니다');
+    }).catch(function(e){wrap.remove();alert('VOC PDF 생성 오류: '+e.message);});
+  }
+  if(window.html2canvas&&window.jspdf){done();return;}
+  loadExtScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){loadExtScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',done);});
+};
 
 
 
