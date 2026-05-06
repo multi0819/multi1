@@ -2480,10 +2480,35 @@ window.deleteTaskLog=async function(schedId,dateStr){
   updateHeaderStats();
 };
 
+
+function showProcessOverlay(msg){
+  let el=document.getElementById('globalProcessOverlay');
+  if(!el){
+    el=document.createElement('div');
+    el.id='globalProcessOverlay';
+    el.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+    el.innerHTML='<div style="max-width:320px;width:86%;background:#fff;color:#111827;border-radius:18px;padding:22px 18px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.38);font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif"><div style="font-size:32px;margin-bottom:8px">⏳</div><div id="globalProcessText" style="font-size:19px;font-weight:900;line-height:1.35">처리중입니다…</div><div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.35">이미지 생성 중에는 화면을 닫지 마세요.</div></div>';
+    document.body.appendChild(el);
+  }
+  const txt=document.getElementById('globalProcessText');
+  if(txt)txt.textContent=msg||'처리중입니다…';
+  el.style.display='flex';
+}
+function hideProcessOverlay(){
+  const el=document.getElementById('globalProcessOverlay');
+  if(el)el.style.display='none';
+}
+function waitProcessFrame(){
+  return new Promise(function(resolve){requestAnimationFrame(function(){requestAnimationFrame(resolve);});});
+}
+
 /* ════ 카톡 공유 (개별 항목) ════ */
 window.kakaoShare=async function(schedId,dateStr){
   if(!_selStatus){alert('정상/이상 여부를 먼저 선택해주세요.');return;}
   if(!modalPhotos.length){alert('사진을 1장 이상 첨부해주세요.');return;}
+  showProcessOverlay('처리중입니다… 카톡 보고서를 준비하고 있습니다.');
+  await waitProcessFrame();
+  try{
   const note=document.getElementById('tmNote')?.value.trim()||'없음';
   const sched=state.schedules.find(s=>s.id===schedId);
   const dom=DOMAINS.find(d=>d.id===sched?.domain)||DOMAINS[3];
@@ -2502,8 +2527,8 @@ window.kakaoShare=async function(schedId,dateStr){
   await saveTaskLog(schedId,dateStr);
   closeModal('taskModal');
   showToast('보고서 이미지 생성 중...');
-  // 카톡 공유용 보고 이미지는 카톡 썸네일처럼 2열을 유지하되, 캡처 배율을 높여 글자 뭉개짐을 줄임.
-  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'8px',landscapeFull:false,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff'});
+  // 카톡 공유용 사진 배치: 글자/표가 많은 사진은 1장/줄, 일반 사진은 2장/줄.
+  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'8px',textHeavyAuto:true,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff'});
   function card(label,val,color){return '<div style="background:#fff;border:1.5px solid #bfdbfe;border-radius:10px;padding:11px 13px"><div style="font-size:14px;color:#64748b;margin-bottom:3px;font-weight:600">'+label+'</div><div style="font-size:22px;font-weight:900;color:'+(color||'#111827')+'">'+val+'</div></div>';}
   var reportRows='';
   if(isRpt){
@@ -2547,29 +2572,74 @@ window.kakaoShare=async function(schedId,dateStr){
     +'<div class="ft">사무동 시설관리 · '+dateStr+' '+timeStr+'</div></body></html>';
   const safeName=((sched&&sched.name||'').replace(/[\/:*?"<>|]/g,'').slice(0,12));
   openGeneratedReportWindow(rHtml,'점검보고_'+dateStr+'_'+safeName+'.png','점검보고_'+dateStr+'.html');
+  }catch(err){
+    console.error(err);
+    alert('카톡 보고서 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }finally{
+    hideProcessOverlay();
+  }
 };
 /* 출력물 공통 사진 배치
-   기본값: 가로사진 1장/줄, 세로사진 2장/줄
-   카톡 공유용: opt.landscapeFull=false 이면 가로사진도 2열 유지 */
+   기본값: 글자/표가 많은 사진은 1장/줄, 일반 사진은 2장/줄
+   - 문서/모니터/표 사진: 축소하면 글자가 뭉개지므로 1열
+   - 일반 현장 사진: 카톡처럼 2열 */
 async function buildOutputPhotoGridHtml(photos,opt){
   opt=opt||{};
   const list=(photos||[]).filter(Boolean);
   if(!list.length)return '';
-  function getImgShape(src){
+
+  function analyzePhoto(src){
     return new Promise(function(resolve){
       var im=new Image();
-      im.onload=function(){resolve({src:src,landscape:im.naturalWidth>=im.naturalHeight});};
-      im.onerror=function(){resolve({src:src,landscape:false});};
+      im.onload=function(){
+        var w=im.naturalWidth||1,h=im.naturalHeight||1;
+        var landscape=w>=h;
+        var textHeavy=false;
+        try{
+          var size=96;
+          var c=document.createElement('canvas');
+          c.width=size;c.height=size;
+          var ctx=c.getContext('2d',{willReadFrequently:true});
+          ctx.drawImage(im,0,0,size,size);
+          var data=ctx.getImageData(0,0,size,size).data;
+          var edge=0,total=(size-1)*(size-1),hv=0;
+          for(var y=0;y<size-1;y++){
+            for(var x=0;x<size-1;x++){
+              var i=(y*size+x)*4;
+              var ir=(y*size+x+1)*4;
+              var id=((y+1)*size+x)*4;
+              var g=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
+              var gr=(data[ir]*0.299+data[ir+1]*0.587+data[ir+2]*0.114);
+              var gd=(data[id]*0.299+data[id+1]*0.587+data[id+2]*0.114);
+              var dx=Math.abs(g-gr),dy=Math.abs(g-gd);
+              if(dx+dy>34)edge++;
+              if(dx>28||dy>28)hv++;
+            }
+          }
+          var edgeRate=edge/total;
+          var hvRate=hv/total;
+          var ratio=w/h;
+          // 작은 글자·표·모니터 화면 사진은 얇은 선/글자 경계가 많아 edge/hv 비율이 높음.
+          textHeavy=landscape&&(edgeRate>0.18||hvRate>0.24||(ratio>1.55&&edgeRate>0.13));
+        }catch(e){
+          // 분석 실패 시에는 넓은 가로사진을 안전하게 1열 처리
+          textHeavy=landscape&&(w/h>1.35);
+        }
+        resolve({src:src,landscape:landscape,textHeavy:textHeavy});
+      };
+      im.onerror=function(){resolve({src:src,landscape:false,textHeavy:false});};
       im.src=src;
     });
   }
-  const infos=await Promise.all(list.map(getImgShape));
+
+  const infos=await Promise.all(list.map(analyzePhoto));
   const gap=opt.gap||'10px';
   const gridStyle=opt.gridStyle||'';
   const imgStyle=opt.imgStyle||'width:100%;height:auto;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)';
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:'+gap+';align-items:start;'+gridStyle+'">'
     +infos.map(function(p){
-      var span=(p.landscape&&opt.landscapeFull!==false)?'grid-column:1 / -1;':'';
+      var full=(opt.textHeavyAuto!==false&&p.textHeavy)||opt.forceFull===true;
+      var span=full?'grid-column:1 / -1;':'';
       return '<img src="'+p.src+'" style="'+span+imgStyle+'">';
     }).join('')+'</div>';
 }
@@ -2587,16 +2657,16 @@ function loadHtml2Canvas(){
 
 function openGeneratedReportWindow(reportHtml,imageFileName,htmlFileName){
   const page='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-  +'<title>보고서 미리보기</title><style>*{box-sizing:border-box}body{margin:0;background:#0b1220;font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif;color:#fff}.top{position:sticky;top:0;z-index:20;background:#111827;padding:12px 14px;border-bottom:1px solid #334155}.title{font-size:20px;font-weight:900;margin-bottom:10px}.bar{display:flex;gap:8px}.bar button{flex:1;border:0;border-radius:12px;padding:13px 8px;font-size:17px;font-weight:900;cursor:pointer}.save{background:#22c55e;color:#fff}.share{background:#FEE500;color:#3C1E1E}.print{background:#1f2937;color:#fff;border:1px solid #475569!important}.view{width:100%;max-width:700px;margin:0 auto;background:#fff;color:#111}.view iframe{display:block;width:100%;border:0;background:#fff}@media print{.top{display:none}.view{max-width:none}}</style></head><body spellcheck="false">'
-  +'<div class="top"><div class="title">✅ 이미지 생성 완료</div><div class="bar"><button class="save" id="saveBtn">저장</button><button class="share" id="shareBtn">공유</button><button class="print" id="printBtn">인쇄</button></div></div>'
+  +'<title>보고서 미리보기</title><style>*{box-sizing:border-box}body{margin:0;background:#0b1220;font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif;color:#fff}.top{position:sticky;top:0;z-index:20;background:#111827;padding:12px 14px;border-bottom:1px solid #334155}.title{font-size:20px;font-weight:900;margin-bottom:10px}.bar{display:flex;gap:8px;flex-wrap:wrap}.bar button{flex:1 1 calc(50% - 8px);border:0;border-radius:12px;padding:13px 8px;font-size:16px;font-weight:900;cursor:pointer;min-width:130px}.bar button:disabled{opacity:.55;cursor:wait}.save{background:#22c55e;color:#fff}.share{background:#FEE500;color:#3C1E1E}.print{background:#1f2937;color:#fff;border:1px solid #475569!important}.busy{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:#fef3c7;color:#78350f;font-size:15px;font-weight:900;text-align:center}.busy.on{display:block}.view{width:100%;max-width:700px;margin:0 auto;background:#fff;color:#111}.view iframe{display:block;width:100%;border:0;background:#fff}@media print{.top{display:none}.view{max-width:none}}</style></head><body spellcheck="false">'
+  +'<div class="top" data-html2canvas-ignore="true"><div class="title">✅ 이미지 생성 완료</div><div class="bar"><button class="save" id="saveBtn">저장</button><button class="share" id="shareBtn">사진공유</button><button class="print" id="printBtn">인쇄</button></div><div class="busy" id="busyMsg">처리중입니다… 이미지를 생성하고 있습니다.</div></div>'
   +'<div class="view"><iframe id="reportFrame"></iframe></div>'
   +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script><script>'
   +'const reportHtml='+JSON.stringify(reportHtml)+';const imageFileName='+JSON.stringify(imageFileName)+';const htmlFileName='+JSON.stringify(htmlFileName)+';'
   +'const f=document.getElementById("reportFrame");f.contentDocument.open();f.contentDocument.write(reportHtml);f.contentDocument.close();'
-  +'function fit(){try{f.style.height=Math.max(600,f.contentDocument.body.scrollHeight)+"px";}catch(e){}}setTimeout(fit,500);setTimeout(fit,1500);'
-  +'async function makeBlob(){fit();const b=f.contentDocument.body;const w=Math.max(b.scrollWidth,b.offsetWidth,640);const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:3,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:12000});return await new Promise(r=>c.toBlob(r,"image/png"));}'
-  +'async function saveImage(){try{const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("원본 PNG 이미지로 저장했습니다. 카톡에서 흐리면 카톡 사진 화질을 원본으로 선택해 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}}'
-  +'async function shareImage(){try{const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/png"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"점검보고"});return;}await saveImage();}catch(e){await saveImage();}}'
+  +'function fit(){try{f.style.height=Math.max(600,f.contentDocument.body.scrollHeight)+"px";}catch(e){}}setTimeout(fit,500);setTimeout(fit,1500);function setBusy(on,msg){const el=document.getElementById("busyMsg");const btns=document.querySelectorAll(".bar button");if(el){el.textContent=msg||"처리중입니다…";el.classList.toggle("on",!!on);}btns.forEach(b=>b.disabled=!!on);}function waitFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}'
+  +'async function makeBlob(){fit();const doc=f.contentDocument;const b=doc.body;b.style.background="#ffffff";b.style.filter="none";b.style.opacity="1";Array.from(doc.images||[]).forEach(img=>{img.style.filter="none";img.style.opacity="1";});await waitFrame();const w=Math.max(b.scrollWidth,b.offsetWidth,640);const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:3,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:12000});return await new Promise(r=>c.toBlob(r,"image/png"));}'
+  +'async function saveImage(){setBusy(true,"처리중입니다… 이미지를 저장 준비 중입니다.");try{await waitFrame();const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("원본 PNG 이미지로 저장했습니다. 카톡에서 흐리면 카톡 사진 화질을 원본으로 선택해 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}finally{setBusy(false);}}'
+  +'async function shareImage(){setBusy(true,"처리중입니다… 카톡 공유용 이미지를 생성하고 있습니다.");try{await waitFrame();const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/png"});if(navigator.canShare&&navigator.canShare({files:[file]})){setBusy(true,"공유창을 여는 중입니다…");await navigator.share({files:[file],title:"점검보고"});return;}setBusy(false);await saveImage();}catch(e){setBusy(false);await saveImage();}finally{setBusy(false);}}'
   +'document.getElementById("saveBtn").onclick=saveImage;document.getElementById("shareBtn").onclick=shareImage;document.getElementById("printBtn").onclick=()=>window.print();'
   +'<\/script></body></html>';
   const blob=new Blob([page],{type:'text/html;charset=utf-8'});
