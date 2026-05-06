@@ -1178,6 +1178,230 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
 .cal-title-wrap{flex:1;text-align:center;min-width:0}.cal-title-wrap .cal-month{font-size:31px!important;line-height:1.1;letter-spacing:-1.2px}.cal-sub-label{margin-top:5px;font-size:12px;font-weight:900;color:#a8c7ff;letter-spacing:-.2px}.cal-header-pro .cal-nav{width:58px!important;height:58px!important;border-radius:20px!important;font-size:38px!important;background:rgba(15,23,42,.42)!important;border-color:rgba(226,232,240,.18)!important;color:#f8fafc!important}.cal-quick-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 0 10px}.cal-quick-btn{height:42px;border-radius:15px;border:1px solid rgba(96,165,250,.22);background:linear-gradient(180deg,rgba(30,41,59,.92),rgba(15,23,42,.96));color:#dbeafe;font-weight:900;font-size:13px;letter-spacing:-.3px}.cal-quick-btn:active{transform:scale(.97)}.cal-legend-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 12px;padding:9px 10px;border-radius:16px;background:rgba(15,23,42,.62);border:1px solid rgba(148,163,184,.12)}.cal-legend-row span{display:flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:900;color:#9fb0c7;white-space:nowrap}.cal-legend-row .dot{width:8px;height:8px;border-radius:50%;display:inline-block}.cal-legend-row .orange{background:#f59e0b}.cal-legend-row .green{background:#22c55e}.cal-legend-row .red{background:#ef4444}.cal-legend-row .white{background:#fff}.cal-grid-pro{gap:7px!important;padding:4px 0 0!important}.cal-grid-pro .cal-dow{height:32px!important;border-radius:13px!important;font-size:14px!important;background:rgba(255,255,255,.045)!important;color:#aebbd0!important}.cal-grid-pro .cal-dow.sun{color:#ff6b7d!important}.cal-grid-pro .cal-dow.sat{color:#67a8ff!important}.cal-grid-pro .cal-day{min-height:56px!important;border-radius:20px!important;aspect-ratio:auto!important;background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.028))!important;border:1px solid rgba(148,163,184,.10)!important;color:#c1cad8!important;font-size:21px!important;font-weight:950!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 6px 16px rgba(0,0,0,.18)!important}.cal-grid-pro .cal-day.other-month{background:transparent!important;border-color:transparent!important;color:#465166!important;box-shadow:none!important;opacity:.62}.cal-grid-pro .cal-day.sun-col{color:#ff6176!important}.cal-grid-pro .cal-day.sat-col{color:#6aa9ff!important}.cal-grid-pro .cal-day.today-cell{background:linear-gradient(180deg,rgba(59,130,246,.30),rgba(37,99,235,.16))!important;border-color:rgba(96,165,250,.52)!important;color:#dbeafe!important}.cal-grid-pro .cal-day.selected{background:linear-gradient(180deg,#3b82f6,#1d4ed8)!important;color:#fff!important;border-color:#93c5fd!important;box-shadow:0 0 0 2px rgba(147,197,253,.22),0 12px 28px rgba(37,99,235,.42)!important;transform:translateY(-1px)}.cal-grid-pro .cal-day.has-tasks::after,.cal-grid-pro .cal-day.all-done::after{bottom:7px!important;width:8px!important;height:8px!important}.cal-grid-pro .cal-day.has-tasks::after{background:#f59e0b!important;box-shadow:0 0 12px rgba(245,158,11,.8)}.cal-grid-pro .cal-day.all-done::after{background:#22c55e!important;box-shadow:0 0 12px rgba(34,197,94,.8)}.cal-grid-pro .cal-day.selected::after{background:#fff!important;box-shadow:0 0 10px rgba(255,255,255,.9)}.cal-grid-pro .holiday-dot{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#ef4444;display:block;box-shadow:0 0 8px rgba(239,68,68,.75)}
 @media(max-width:420px){.cal-panel-pro{padding:14px 12px 18px!important;border-radius:26px!important}.cal-header-pro{height:76px;padding:11px 12px!important;border-radius:22px!important}.cal-title-wrap .cal-month{font-size:28px!important}.cal-sub-label{font-size:11px}.cal-header-pro .cal-nav{width:52px!important;height:52px!important;border-radius:18px!important}.cal-quick-row{gap:6px}.cal-quick-btn{height:38px;font-size:12px}.cal-legend-row{gap:4px;padding:8px 5px}.cal-legend-row span{font-size:9px;gap:3px}.cal-grid-pro{gap:6px!important}.cal-grid-pro .cal-day{min-height:50px!important;border-radius:18px!important;font-size:20px!important}.cal-grid-pro .cal-dow{height:30px!important;font-size:13px!important}}
 
+/* ══════════════════════════════════════════════════════════════
+   SAFE HOME DESIGN OVERRIDE 2026-05-06
+   - CSS 전용 보정
+   - GitHub 이미지 경로 / 데이터 렌더 JS / 카드 생성 구조 미수정
+══════════════════════════════════════════════════════════════ */
+
+/* 전체 배경: 검정 단색 느낌 완화 */
+html,
+body{
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37,99,235,.13), transparent 34%),
+    linear-gradient(180deg, #0f172a 0%, #080d14 58%, #05070c 100%) !important;
+}
+
+/* 앱/홈 배경만 안전하게 보정 */
+.app{
+  background:transparent !important;
+}
+
+#homeScreen{
+  background:
+    radial-gradient(circle at 50% 8%, rgba(59,130,246,.11), transparent 34%),
+    linear-gradient(180deg, #0d1522 0%, #070b12 100%) !important;
+}
+
+/* 홈 그리드: 실제 모바일 세로 화면 기준 여백 재조정 */
+#domainGrid{
+  background:
+    radial-gradient(circle at 50% 50%, rgba(15,23,42,.62), transparent 56%),
+    linear-gradient(180deg, #07101b 0%, #05080f 100%) !important;
+  padding:22px 22px 32px !important;
+  gap:30px 24px !important;
+}
+
+/* 중앙 십자선 약화: 콘텐츠보다 선이 튀지 않도록 */
+#domainGrid::before{
+  width:1px !important;
+  background:linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(148,163,184,.12) 12%,
+    rgba(148,163,184,.20) 50%,
+    rgba(148,163,184,.12) 88%,
+    transparent 100%
+  ) !important;
+  box-shadow:none !important;
+}
+
+#domainGrid::after{
+  height:1px !important;
+  background:linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(148,163,184,.12) 12%,
+    rgba(148,163,184,.20) 50%,
+    rgba(148,163,184,.12) 88%,
+    transparent 100%
+  ) !important;
+  box-shadow:none !important;
+}
+
+/* 홈 카드: 구조/이미지 경로는 그대로 두고 크기·그림자만 조정 */
+.dc{
+  padding:0 !important;
+}
+
+.dc-card{
+  height:min(76%, 330px) !important;
+  max-width:92% !important;
+  border-radius:22px !important;
+  background:#fff !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.34),
+    0 0 0 1px rgba(255,255,255,.06) !important;
+  transform:translateZ(0);
+}
+
+.dc:active .dc-card{
+  transform:scale(.985);
+}
+
+/* 이미지 자체는 기존 경로/표시방식 유지 */
+.dc-img{
+  object-fit:fill !important;
+  object-position:center center !important;
+}
+
+/* 카드 숫자 배지: 너무 튀지 않게 정리 */
+.dc-badges{
+  top:8px !important;
+  right:8px !important;
+}
+
+.dc-pill{
+  min-width:54px !important;
+  height:28px !important;
+  padding:0 10px !important;
+  border-radius:999px !important;
+  font-size:19px !important;
+  letter-spacing:-.8px !important;
+  background:rgba(255,255,255,.92) !important;
+  border:1px solid rgba(226,232,240,.9) !important;
+  box-shadow:0 4px 12px rgba(15,23,42,.18) !important;
+}
+
+/* 헤더는 기존 구조 유지, 여백/상태카드만 안정적으로 미세 조정 */
+.header{
+  background:linear-gradient(180deg,#111827 0%,#0d1420 100%) !important;
+  border-bottom:1px solid rgba(148,163,184,.16) !important;
+}
+
+.header-inner{
+  padding:4px 12px 6px !important;
+}
+
+.header-top{
+  gap:10px !important;
+}
+
+.logo-text{
+  font-size:18px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+}
+
+.menu-btn{
+  width:34px !important;
+  height:34px !important;
+  border-radius:10px !important;
+}
+
+.clock-time{
+  font-size:12px !important;
+}
+
+.clock-date{
+  font-size:10px !important;
+}
+
+/* 상단 상태카드: 좁은 모바일에서 제목/숫자 답답함 완화 */
+.header-stats{
+  gap:6px !important;
+  margin-top:7px !important;
+}
+
+.sc{
+  min-height:50px !important;
+  padding:6px 6px !important;
+  border-radius:15px !important;
+  column-gap:5px !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025)) !important;
+  border-color:rgba(148,163,184,.14) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 5px 14px rgba(0,0,0,.14) !important;
+}
+
+.sc .si{
+  width:24px !important;
+  height:24px !important;
+  border-radius:9px !important;
+  font-size:15px !important;
+}
+
+.sc .sl{
+  font-size:9px !important;
+  letter-spacing:-.45px !important;
+  line-height:1.05 !important;
+}
+
+.sc .sv{
+  font-size:16px !important;
+  line-height:1 !important;
+}
+
+/* 작은 휴대폰: 실제 세로 긴 화면에서 카드가 과하게 길어지지 않게 */
+@media(max-width:420px){
+  #domainGrid{
+    padding:20px 20px 30px !important;
+    gap:28px 20px !important;
+  }
+
+  .dc-card{
+    height:min(74%, 318px) !important;
+    max-width:94% !important;
+    border-radius:21px !important;
+  }
+
+  .dc-pill{
+    min-width:52px !important;
+    height:27px !important;
+    font-size:18px !important;
+  }
+}
+
+/* 큰 휴대폰/태블릿 폭: 카드 과대 확대 방지 */
+@media(min-width:560px){
+  #domainGrid{
+    padding:28px 32px 34px !important;
+    gap:34px 30px !important;
+  }
+
+  .dc-card{
+    height:min(74%, 340px) !important;
+    width:auto !important;
+    max-height:calc(100% - 24px) !important;
+    max-width:88% !important;
+  }
+}
+
+/* 가로모드는 기존보다 살짝 압축 */
+@media(orientation:landscape){
+  #domainGrid{
+    padding:16px 36px 22px !important;
+    gap:24px 34px !important;
+  }
+
+  .dc-card{
+    width:min(86%, 360px) !important;
+    height:auto !important;
+    max-height:calc(100% - 22px) !important;
+  }
+}
+
+
+
 </style>
 </head>
 <body spellcheck="false">
