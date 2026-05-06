@@ -1402,6 +1402,191 @@ body{
 
 
 
+
+
+/* 근무현황: 사람별 긴 목록 → 방재실/근무조 요약형 */
+.shift-day-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.shift-day-title{font-size:20px;font-weight:900;letter-spacing:-.6px;color:#f8fafc}
+.shift-day-sub{font-size:11px;color:#8b949e;margin-top:4px;font-weight:700}
+.shift-holiday{font-size:11px;color:#fb7185;margin-left:7px;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.22)}
+.shift-input-btn{height:42px;min-width:112px;border-radius:14px!important;font-size:14px!important;font-weight:900!important}
+.shift-summary-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.shift-room-card{border:1px solid rgba(148,163,184,.16);border-radius:20px;padding:12px;background:linear-gradient(180deg,rgba(30,41,59,.78),rgba(15,23,42,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.shift-room-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.shift-room-title span{font-size:15px;font-weight:900;color:#e5edf8;background:rgba(59,130,246,.12);border:1px solid rgba(96,165,250,.20);border-radius:12px;padding:6px 10px}
+.shift-room-title em{font-style:normal;font-size:12px;font-weight:900;color:#9fb2ca}
+.shift-group-row{display:grid;grid-template-columns:74px 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid rgba(148,163,184,.10)}
+.shift-group-row:first-of-type{border-top:0}
+.shift-group-label{height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;white-space:nowrap}
+.shift-group-row.day .shift-group-label{color:#fb923c;background:rgba(249,115,22,.13);border:1px solid rgba(249,115,22,.28)}
+.shift-group-row.night .shift-group-label{color:#60a5fa;background:rgba(59,130,246,.13);border:1px solid rgba(59,130,246,.28)}
+.shift-group-row.duty .shift-group-label{color:#cbd5e1;background:rgba(100,116,139,.16);border:1px solid rgba(148,163,184,.24)}
+.shift-group-row.special .shift-group-label{color:#fbbf24;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.30)}
+.shift-group-names{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center}
+.shift-person{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(148,163,184,.16);font-size:14px;font-weight:900;color:#f1f5f9;letter-spacing:-.3px}
+.shift-person b{font-size:12px;line-height:1}
+.shift-person-elec b{color:#60a5fa}.shift-person-mech b{color:#34d399}
+.shift-empty-mini{font-size:12px;color:#64748b;font-weight:800;padding-top:6px}
+.shift-count-line{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 2px;padding:8px 10px;border-radius:14px;background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.12);color:#9fb2ca;font-size:12px;font-weight:900}
+.shift-count-line span{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.035)}
+.shift-count-line b{color:#f8fafc;font-size:15px;margin-left:2px}
+@media(max-width:420px){
+  .shift-day-title{font-size:19px}.shift-day-sub{display:none}.shift-input-btn{min-width:104px;height:40px}
+  .shift-room-card{padding:11px;border-radius:18px}.shift-group-row{grid-template-columns:68px 1fr;gap:7px;padding:7px 0}
+  .shift-group-label{height:28px;font-size:11px}.shift-person{min-height:28px;font-size:13px;padding:5px 8px}
+}
+
+
+/* ════ 모바일 업무일지 입력 개선: 상단 맞춤 + 간편입력 + 축소 미리보기 ════ */
+.duty-mobile-helper{
+  margin:8px 0 10px;
+  padding:12px;
+  border:1px solid rgba(96,165,250,.18);
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(30,41,59,.88),rgba(15,23,42,.94));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.duty-mobile-helper-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:10px;
+  font-size:15px;
+  font-weight:900;
+  color:#f8fafc;
+}
+.duty-mobile-helper-title small{font-size:11px;font-weight:800;color:#94a3b8;line-height:1.35;text-align:right}
+.duty-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.duty-quick-field{display:flex;flex-direction:column;gap:5px}
+.duty-quick-field.full{grid-column:1/-1}
+.duty-quick-field label{font-size:11px;font-weight:900;color:#9fb0c7;padding-left:2px}
+.duty-quick-colorbar{
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  margin:0 0 10px;
+  padding:8px;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:15px;
+  background:rgba(15,23,42,.96);
+  backdrop-filter:blur(8px);
+}
+.duty-quick-colorbar .duty-color-btn{height:38px;padding:0 8px;border-radius:12px;font-size:13px}
+.duty-quick-colorbar .duty-color-btn.active{box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(59,130,246,.45)}
+.duty-quick-input,.duty-quick-ta,.duty-quick-edit{
+  width:100%;
+  border:1px solid rgba(148,163,184,.22);
+  border-radius:13px;
+  background:#101827;
+  color:#f8fafc;
+  padding:10px 11px;
+  font-size:14px;
+  font-weight:800;
+  outline:none;
+}
+.duty-quick-ta,.duty-quick-edit{min-height:86px;resize:vertical;line-height:1.45;font-weight:700;white-space:pre-wrap;overflow:auto}
+.duty-quick-edit:focus{border-color:#60a5fa;box-shadow:0 0 0 2px rgba(96,165,250,.2)}
+.duty-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.duty-quick-actions .btn{height:42px;border-radius:13px;font-size:13px;font-weight:900}
+.duty-editor-wrap{
+  width:100%;
+  max-width:100%;
+  overflow:auto;
+  background:#0b1220;
+  padding:8px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.2);
+}
+.duty-editor-wrap.fit-mobile{
+  overflow:hidden;
+  display:flex;
+  justify-content:flex-start;
+  align-items:flex-start;
+}
+.duty-editor-wrap.fit-mobile .duty-sheet{
+  margin:0;
+  flex:0 0 auto;
+  transform-origin:top left;
+}
+.duty-preview-note{
+  margin:8px 2px 0;
+  color:#94a3b8;
+  font-size:11px;
+  line-height:1.45;
+  font-weight:800;
+}
+/* 업무일지/인수인계: 모바일 작성 화면 여백 축소 */
+.duty-mobile-helper{margin-top:2px;padding:10px}
+.duty-mobile-helper-title{margin-bottom:8px}
+.duty-quick-grid{gap:7px;margin-bottom:6px}
+.duty-quick-input,.duty-quick-ta,.duty-quick-edit{padding:9px 10px;border-radius:12px}
+@media(max-width:640px){
+  .modal-box{height:96dvh;padding:12px 14px 28px;border-radius:20px 20px 0 0}
+  .duty-quick-colorbar{right:8px;top:150px;padding:6px;border-radius:15px}
+  .duty-quick-colorbar .duty-color-btn{width:40px;height:30px;font-size:10px;border-radius:10px}
+  .duty-quick-colorbar .color-drag-handle{height:22px;font-size:9px}
+}
+
+@media(max-width:640px){
+  .modal-box{padding:12px 14px 28px;height:96dvh;border-radius:20px 20px 0 0}
+  .modal-title{font-size:20px;margin-bottom:12px;align-items:center}
+  .modal-close{width:40px;height:40px;border-radius:13px;font-size:22px}
+  .duty-doc-toolbar{position:sticky;top:0;z-index:3;margin:8px 0 10px;padding:8px;background:rgba(15,23,42,.94);backdrop-filter:blur(8px)}
+  .duty-color-btn{height:38px;min-width:54px;padding:0 9px;font-size:13px;border-radius:12px}
+  .duty-quick-grid{grid-template-columns:1fr}
+  .duty-quick-actions{grid-template-columns:1fr}
+}
+
+
+/* ════ 업무일지 색상 버튼 정리: 한 줄 표시 + 하단 중복 색상바 제거 ════ */
+.duty-quick-colorbar{
+  position:sticky;
+  top:0;
+  z-index:8;
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:5px !important;
+  margin:0 0 8px !important;
+  padding:6px !important;
+  border-radius:14px !important;
+  border:1px solid rgba(148,163,184,.18) !important;
+  background:rgba(15,23,42,.96) !important;
+  overflow:visible !important;
+}
+.duty-quick-colorbar .color-drag-handle{display:none!important;}
+.duty-quick-colorbar .duty-color-btn{
+  min-width:0 !important;
+  width:100% !important;
+  height:34px !important;
+  padding:0 3px !important;
+  border-radius:11px !important;
+  font-size:12px !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+}
+.duty-quick-colorbar .duty-color-btn.active{
+  box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(59,130,246,.45) !important;
+}
+.duty-doc-toolbar{display:none!important;}
+@media(max-width:640px){
+  .duty-quick-colorbar{
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+    gap:4px !important;
+    padding:5px !important;
+  }
+  .duty-quick-colorbar .duty-color-btn{
+    height:32px !important;
+    font-size:11px !important;
+    padding:0 2px !important;
+    border-radius:10px !important;
+  }
+}
+
 </style>
 </head>
 <body spellcheck="false">
@@ -5730,68 +5915,79 @@ function renderShiftDayPanel(dateStr){
 
   const d=new Date(dateStr+'T00:00:00');
   const isHol=isHoliday(dateStr);
-  const dow=d.getDay();
   const displayDate=d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
-
   const rooms=['1','2'];
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div style="font-size:15px;font-weight:900">${displayDate}${isHol?'<span style="font-size:11px;color:#fb7185;margin-left:6px">공휴일</span>':''}</div>
-    <button class="btn sm primary" onclick="openShiftEditModal('${dateStr}')">✏️ 근무 입력</button>
+  const filterRooms = shiftRoomFilter==='all' ? rooms : [shiftRoomFilter];
+
+  const makePersonChip=(m,shiftKey)=>{
+    const domClass=m.domain==='elec'?'shift-person-elec':'shift-person-mech';
+    const domIcon=m.domain==='elec'?'⚡':'⚙️';
+    return `<span class="shift-person ${domClass}"><b>${domIcon}</b>${esc(m.name)}</span>`;
+  };
+
+  let totalVisible=0;
+  let totalDay=0,totalNight=0,totalDuty=0,totalSpecial=0;
+
+  let html=`<div class="shift-day-head">
+    <div>
+      <div class="shift-day-title">${displayDate}${isHol?'<span class="shift-holiday">공휴일</span>':''}</div>
+      <div class="shift-day-sub">방재실별 주간·야간 근무자를 한눈에 표시합니다.</div>
+    </div>
+    <button class="btn sm primary shift-input-btn" onclick="openShiftEditModal('${dateStr}')">✏️ 근무 입력</button>
   </div>`;
 
-  // 방재실별 렌더
-  const filterRooms = shiftRoomFilter==='all' ? rooms : [shiftRoomFilter];
+  html+='<div class="shift-summary-grid">';
+
   filterRooms.forEach(room=>{
     const staff=getStaffForDate(dateStr, room).sort((a,b)=>{
-      // 주간(day)→야간(night)→당직(duty)→휴가(vacation)→병가(sick) 순, 같으면 전기→기계→이름
-      const shiftOrder={day:0,night:1,duty:2,vacation:3,sick:4,off:5,rest:6};
-      const ea=getEffectiveShift(a,dateStr).shift||'rest';
-      const eb=getEffectiveShift(b,dateStr).shift||'rest';
-      const so=(shiftOrder[ea]??9)-(shiftOrder[eb]??9);
-      if(so!==0)return so;
       const domOrder={elec:0,mech:1};
       return (domOrder[a.domain]??2)-(domOrder[b.domain]??2)||(a.name||'').localeCompare(b.name||'');
     });
     if(!staff.length) return;
 
-    html+=`<div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:900;color:var(--text2);margin-bottom:7px;letter-spacing:.5px;padding:5px 10px;background:var(--surface2);border-radius:8px;display:inline-block">${room}방재실</div>
-      <div style="display:flex;flex-direction:column;gap:5px">`;
-
+    const groups={day:[],night:[],duty:[],special:[]};
     staff.forEach(m=>{
-      const eff = getEffectiveShift(m, dateStr);
-      const shiftKey = eff.shift;
-
-      // 비번(off)·휴무(rest)는 자동/수동 모두 표시 생략
-      if(shiftKey==='off'||shiftKey==='rest') return;
-
-      const domColor=m.domain==='elec'?'var(--elec)':'var(--mech)';
-      const domLabel=m.domain==='elec'?'⚡전기':'⚙️기계';
-      const st=shiftKey?SHIFT_TYPES[shiftKey]:null;
-      const shiftBadge=st
-        ?`<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${st.label}</span>`
-        :(m.firstNightDate
-          ?`<span style="font-size:11px;color:var(--text3);padding:3px 8px;border-radius:20px;background:var(--surface2)">기준일 이전</span>`
-          :`<span style="font-size:11px;color:var(--warn);padding:3px 8px;border-radius:20px;background:rgba(245,158,11,.1)">기준일 미설정</span>`
-        );
-      const note=eff.note&&!eff.isAuto?`<div style="font-size:11px;color:var(--text2);margin-top:3px;padding-left:2px">📝 ${esc(eff.note)}</div>`:'';
-
-      html+=`<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;font-weight:700;color:${domColor}">${domLabel}</span>
-            <span style="font-size:14px;font-weight:900">${esc(m.name)}</span>
-          </div>
-          ${note}
-        </div>
-        ${shiftBadge}
-      </div>`;
+      const eff=getEffectiveShift(m,dateStr);
+      const shiftKey=eff.shift;
+      if(!shiftKey || shiftKey==='off' || shiftKey==='rest') return;
+      if(shiftKey==='day') groups.day.push(makePersonChip(m,shiftKey));
+      else if(shiftKey==='night') groups.night.push(makePersonChip(m,shiftKey));
+      else if(shiftKey==='duty') groups.duty.push(makePersonChip(m,shiftKey));
+      else if(shiftKey==='vacation' || shiftKey==='sick') groups.special.push(makePersonChip(m,shiftKey));
     });
-    html+='</div></div>';
+
+    totalDay+=groups.day.length;
+    totalNight+=groups.night.length;
+    totalDuty+=groups.duty.length;
+    totalSpecial+=groups.special.length;
+    totalVisible+=groups.day.length+groups.night.length+groups.duty.length+groups.special.length;
+
+    const row=(cls,label,items,emptyText)=>`<div class="shift-group-row ${cls}">
+      <div class="shift-group-label">${label}</div>
+      <div class="shift-group-names">${items.length?items.join(''):`<span class="shift-empty-mini">${emptyText}</span>`}</div>
+    </div>`;
+
+    html+=`<div class="shift-room-card">
+      <div class="shift-room-title"><span>${room}방재실</span><em>${groups.day.length+groups.night.length+groups.duty.length+groups.special.length}명</em></div>
+      ${row('day','☀️ 주간',groups.day,'주간 없음')}
+      ${row('night','🌙 야간',groups.night,'야간 없음')}
+      ${groups.duty.length?row('duty','🛡 당직',groups.duty,''):''}
+      ${groups.special.length?row('special','🌴 특이',groups.special,''):''}
+    </div>`;
   });
 
-  if(!filterRooms.some(room=>getStaffForDate(dateStr,room).length)){
-    html+='<div class="empty">등록된 근무자가 없습니다<br><span style="font-size:11px;margin-top:4px;display:block">근무자 관리에서 추가하세요</span></div>';
+  html+='</div>';
+
+  html+=`<div class="shift-count-line">
+    <span>전체 <b>${totalVisible}</b></span>
+    <span>주간 <b>${totalDay}</b></span>
+    <span>야간 <b>${totalNight}</b></span>
+    ${totalDuty?`<span>당직 <b>${totalDuty}</b></span>`:''}
+    ${totalSpecial?`<span>특이 <b>${totalSpecial}</b></span>`:''}
+  </div>`;
+
+  if(totalVisible===0){
+    html+='<div class="empty">표시할 주간·야간 근무자가 없습니다<br><span style="font-size:11px;margin-top:4px;display:block">비번/휴무자는 목록에서 제외됩니다.</span></div>';
   }
 
   box.innerHTML=html;
@@ -6250,6 +6446,8 @@ window.chPrint=function(){
 let dutyDocType='daily';
 let dutyEditId=null;
 let dutyActiveEditable=null;
+let dutyActiveQuick=null;
+let dutyCurrentColor='#000000';
 function dutyKey(type){return 'facility_duty_docs_'+(type||dutyDocType||'daily');}
 function dutyDocs(type){try{return JSON.parse(localStorage.getItem(dutyKey(type))||'[]');}catch(e){return [];}}
 function saveDutyDocs(type,arr){localStorage.setItem(dutyKey(type),JSON.stringify(arr||[]));}
@@ -6267,10 +6465,74 @@ function dutyUnfmtDate(v){
 }
 function dutyDefaultBullets(){return '<br><br><br><br><br><br>'; }
 function dutyCleanHtml(html){return String(html||'').replace(/■\s*/g,'');}
-function dutySetColor(color){const target=dutyActiveEditable||document.querySelector('.duty-edit:focus');if(target){target.focus();try{document.execCommand('foreColor',false,color);}catch(e){target.style.color=color;}}}
-function dutyBindEditors(){document.querySelectorAll('.duty-edit').forEach(function(el){el.addEventListener('focus',function(){dutyActiveEditable=el;});el.addEventListener('mouseup',function(){dutyActiveEditable=el;});el.addEventListener('keyup',function(){dutyActiveEditable=el;});});}
+function dutyColorButtons(cls){
+  cls=cls||'duty-doc-toolbar';
+  const isFloat=String(cls).indexOf('duty-quick-colorbar')>-1;
+  const keep=' onpointerdown="dutyKeepEditFocus(event)" onmousedown="dutyKeepEditFocus(event)" ';
+  return '<div class="'+cls+'" '+(isFloat?'id="dutyFloatingColorbar"':'')+'>'
+    +'<button class="duty-color-btn" data-color="#000000" '+keep+' onclick="dutySetColor(\'#000000\')">검정</button>'
+    +'<button class="duty-color-btn" data-color="#ef4444" '+keep+' onclick="dutySetColor(\'#ef4444\')">빨강</button>'
+    +'<button class="duty-color-btn" data-color="#2563eb" '+keep+' onclick="dutySetColor(\'#2563eb\')">파랑</button>'
+    +'<button class="duty-color-btn" data-color="#16a34a" '+keep+' onclick="dutySetColor(\'#16a34a\')">초록</button>'
+    +'<button class="duty-color-btn" data-color="#f59e0b" '+keep+' onclick="dutySetColor(\'#f59e0b\')">노랑</button>'
+    +'</div>';
+}
+function dutyKeepEditFocus(ev){
+  if(ev)ev.preventDefault();
+  const t=dutyActiveQuick||dutyActiveEditable||document.querySelector('.duty-quick-edit:focus')||document.querySelector('.duty-edit:focus');
+  if(t){try{t.focus();}catch(e){}}
+}
+function dutyMarkColor(color){
+  document.querySelectorAll('.duty-color-btn').forEach(function(b){
+    b.classList.toggle('active', String(b.getAttribute('data-color')).toLowerCase()===String(color).toLowerCase());
+  });
+}
+function dutySetColor(color){
+  dutyCurrentColor=color||'#000000';
+  const target=dutyActiveQuick||dutyActiveEditable||document.querySelector('.duty-quick-edit:focus')||document.querySelector('.duty-edit:focus');
+  if(target){
+    target.focus();
+    target.dataset.dutyColor=dutyCurrentColor;
+    try{document.execCommand('styleWithCSS',false,true);document.execCommand('foreColor',false,dutyCurrentColor);}
+    catch(e){}
+    target.style.caretColor=dutyCurrentColor;
+  }
+  dutyMarkColor(dutyCurrentColor);
+}
+function dutyBindEditors(){
+  document.querySelectorAll('.duty-edit').forEach(function(el){
+    el.addEventListener('focus',function(){dutyActiveEditable=el;dutyActiveQuick=null;});
+    el.addEventListener('mouseup',function(){dutyActiveEditable=el;});
+    el.addEventListener('keyup',function(){dutyActiveEditable=el;});
+  });
+}
+function dutyBindQuickEditors(){
+  document.querySelectorAll('.duty-quick-edit').forEach(function(el){
+    el.addEventListener('focus',function(){dutyActiveQuick=el;dutyActiveEditable=null;el.dataset.dutyColor=dutyCurrentColor;el.style.caretColor=dutyCurrentColor;try{document.execCommand('styleWithCSS',false,true);document.execCommand('foreColor',false,dutyCurrentColor);}catch(e){}});
+    el.addEventListener('mouseup',function(){dutyActiveQuick=el;});
+    el.addEventListener('keyup',function(){dutyActiveQuick=el;});
+  });
+  dutyMarkColor(dutyCurrentColor);
+  dutyInitFloatingColorbar();
+}
+function dutyInitFloatingColorbar(){
+  const bar=document.getElementById('dutyFloatingColorbar');
+  if(!bar||bar.dataset.bound==='1')return;
+  bar.dataset.bound='1';
+  const handle=bar.querySelector('.color-drag-handle')||bar;
+  let startY=0,startTop=0,drag=false;
+  const move=function(y){
+    const min=80, max=Math.max(min, window.innerHeight-(bar.offsetHeight||220)-24);
+    const top=Math.min(max,Math.max(min,startTop+(y-startY)));
+    bar.style.top=top+'px';
+  };
+  handle.addEventListener('pointerdown',function(e){drag=true;startY=e.clientY;startTop=parseFloat(bar.style.top||getComputedStyle(bar).top)||150;try{handle.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
+  handle.addEventListener('pointermove',function(e){if(!drag)return;move(e.clientY);e.preventDefault();});
+  handle.addEventListener('pointerup',function(e){drag=false;try{handle.releasePointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
+}
 function openDutyDoc(type){dutyDocType=type||'daily';dutyEditId=null;closeSidebar();renderDutyDoc('form');}
-function dutyToolbar(){return '<div class="duty-doc-toolbar"><button class="duty-color-btn" data-color="#000000" onclick="dutySetColor(\'#000000\')">검정</button><button class="duty-color-btn" data-color="#ef4444" onclick="dutySetColor(\'#ef4444\')">빨강</button><button class="duty-color-btn" data-color="#2563eb" onclick="dutySetColor(\'#2563eb\')">파랑</button><button class="duty-color-btn" data-color="#16a34a" onclick="dutySetColor(\'#16a34a\')">초록</button><button class="duty-color-btn" data-color="#f59e0b" onclick="dutySetColor(\'#f59e0b\')">노랑</button></div>';}
+function dutyToolbar(){return '';}
+function dutyQuickToolbar(){return dutyColorButtons('duty-quick-colorbar');}
 function dutyInputVal(id){const el=document.getElementById(id);return el?el.value:'';}
 function dutyHtmlVal(id){const el=document.getElementById(id);return el?el.innerHTML:'';}
 function dutyPlain(html){const tmp=document.createElement('div');tmp.innerHTML=html||'';return tmp.textContent||tmp.innerText||'';}
@@ -6312,6 +6574,99 @@ function dutyHandoverSheet(rec,editable){
     +'<tr class="handover-night-elec"><td class="duty-cat">전기</td><td><div id="dutyNightElec" class="duty-edit" '+ce+'>'+nightElec+'</div></td></tr>'
     +'</table></div>';
 }
+
+function dutyHtmlToText(html){
+  html = String(html || '')
+    .replace(/<br\s*\/?>(\s*)/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/div>/gi, '');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+function dutyTextToHtml(txt){
+  return esc(String(txt || '')).replace(/\n/g, '<br>');
+}
+function dutyQuickVal(id){
+  const el=document.getElementById(id);if(!el)return '';
+  if(el.classList&&el.classList.contains('duty-quick-edit')){
+    let html=el.innerHTML||'';
+    const c=el.dataset.dutyColor||dutyCurrentColor||'#000000';
+    if(html && !/<(span|font|div|br)[\s>]/i.test(html) && String(c).toLowerCase()!=='#000000'){
+      html='<span style="color:'+c+'">'+esc(html)+'</span>';
+    }
+    return html;
+  }
+  return el.value;
+}
+function dutyMaybeHtml(v){v=String(v||'');return /<[^>]+>/.test(v)?dutyCleanHtml(v):dutyTextToHtml(v);}
+function dutyApplyQuickToSheet(){
+  const type=dutyDocType||'daily';
+  const setVal=function(id,v){const el=document.getElementById(id);if(el)el.value=v;};
+  const setHtml=function(id,v){const el=document.getElementById(id);if(el)el.innerHTML=dutyMaybeHtml(v);};
+  setVal('dutyDate',dutyQuickVal('dqDate')||dutyToday());
+  if(type==='daily'){
+    setVal('dutyWorker',dutyQuickVal('dqWorker'));
+    setVal('dutyWeather',dutyQuickVal('dqWeather'));
+    setVal('dutyHighTemp',dutyQuickVal('dqHighTemp'));
+    setVal('dutyLowTemp',dutyQuickVal('dqLowTemp'));
+    setHtml('dutyElecToday',dutyQuickVal('dqElecToday'));
+    setHtml('dutyElecPlan',dutyQuickVal('dqElecPlan'));
+    setHtml('dutyMechToday',dutyQuickVal('dqMechToday'));
+    setHtml('dutyMechPlan',dutyQuickVal('dqMechPlan'));
+    setHtml('dutyArchToday',dutyQuickVal('dqArchToday'));
+    setHtml('dutyArchPlan',dutyQuickVal('dqArchPlan'));
+  }else{
+    setVal('dutyDayShift',dutyQuickVal('dqDayShift'));
+    setVal('dutyNightShift',dutyQuickVal('dqNightShift'));
+    setHtml('dutyDayMech',dutyQuickVal('dqDayMech'));
+    setHtml('dutyDayElec',dutyQuickVal('dqDayElec'));
+    setHtml('dutyNightMech',dutyQuickVal('dqNightMech'));
+    setHtml('dutyNightElec',dutyQuickVal('dqNightElec'));
+  }
+  dutyFitPreview();
+  showToast('양식에 반영했습니다');
+}
+function dutyFitPreview(){
+  const wrap=document.querySelector('.duty-editor-wrap.fit-mobile');
+  const sheet=wrap?wrap.querySelector('.duty-sheet'):null;
+  if(!wrap||!sheet)return;
+  sheet.style.transform='scale(1)';
+  const avail=wrap.clientWidth||1;
+  const sw=sheet.offsetWidth||771;
+  const scale=Math.min(1, Math.max(.38, avail/sw));
+  sheet.style.transform='scale('+scale+')';
+  wrap.style.height=Math.ceil((sheet.offsetHeight||1100)*scale)+18+'px';
+}
+function dutyEasyEditor(rec,type){
+  rec=rec||{}; type=type||dutyDocType||'daily';
+  const date=esc(rec.date||dutyToday());
+  if(type==='daily'){
+    return '<div class="duty-mobile-helper"><div class="duty-mobile-helper-title"><span>📱 모바일 간편입력</span><small>색 선택 후 글 작성</small></div>'+dutyQuickToolbar()
+      +'<div class="duty-quick-grid">'
+      +'<div class="duty-quick-field"><label>작성일</label><input class="duty-quick-input" id="dqDate" type="date" value="'+date+'"></div>'
+      +'<div class="duty-quick-field"><label>근무자</label><input class="duty-quick-input" id="dqWorker" value="'+esc(rec.worker||'')+'"></div>'
+      +'<div class="duty-quick-field"><label>날씨</label><input class="duty-quick-input" id="dqWeather" value="'+esc(rec.weather||'')+'"></div>'
+      +'<div class="duty-quick-field"><label>최고/최저온도</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input class="duty-quick-input" id="dqHighTemp" placeholder="최고" value="'+esc(rec.highTemp||'')+'"><input class="duty-quick-input" id="dqLowTemp" placeholder="최저" value="'+esc(rec.lowTemp||'')+'"></div></div>'
+      +'<div class="duty-quick-field full"><label>전기/소방 - 금일 실적</label><div class="duty-quick-edit" id="dqElecToday" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.elecToday||'')+'</div></div>'
+      +'<div class="duty-quick-field full"><label>전기/소방 - 명일 계획</label><div class="duty-quick-edit" id="dqElecPlan" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.elecPlan||'')+'</div></div>'
+      +'<div class="duty-quick-field full"><label>기계 - 금일 실적</label><div class="duty-quick-edit" id="dqMechToday" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.mechToday||'')+'</div></div>'
+      +'<div class="duty-quick-field full"><label>기계 - 명일 계획</label><div class="duty-quick-edit" id="dqMechPlan" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.mechPlan||'')+'</div></div>'
+      +'<div class="duty-quick-field full"><label>기타 - 금일 실적</label><div class="duty-quick-edit" id="dqArchToday" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.archToday||'')+'</div></div>'
+      +'<div class="duty-quick-field full"><label>기타 - 명일 계획</label><div class="duty-quick-edit" id="dqArchPlan" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.archPlan||'')+'</div></div>'
+      +'</div><div class="duty-quick-actions"><button class="btn primary" onclick="dutyApplyQuickToSheet()">양식에 반영</button><button class="btn ok-btn" onclick="dutyApplyQuickToSheet();saveDutyDoc()">반영 후 저장</button></div></div>';
+  }
+  return '<div class="duty-mobile-helper"><div class="duty-mobile-helper-title"><span>📱 모바일 간편입력</span><small>색 선택 후 글 작성</small></div>'+dutyQuickToolbar()
+    +'<div class="duty-quick-grid">'
+    +'<div class="duty-quick-field"><label>일자</label><input class="duty-quick-input" id="dqDate" type="date" value="'+date+'"></div>'
+    +'<div class="duty-quick-field"><label>주간 당직</label><input class="duty-quick-input" id="dqDayShift" value="'+esc(rec.dayShift||'')+'"></div>'
+    +'<div class="duty-quick-field"><label>야간 당직</label><input class="duty-quick-input" id="dqNightShift" value="'+esc(rec.nightShift||'')+'"></div>'
+    +'<div class="duty-quick-field full"><label>주간 기계</label><div class="duty-quick-edit" id="dqDayMech" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.dayMech||'')+'</div></div>'
+    +'<div class="duty-quick-field full"><label>주간 전기</label><div class="duty-quick-edit" id="dqDayElec" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.dayElec||'')+'</div></div>'
+    +'<div class="duty-quick-field full"><label>야간 기계</label><div class="duty-quick-edit" id="dqNightMech" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.nightMech||'')+'</div></div>'
+    +'<div class="duty-quick-field full"><label>야간 전기</label><div class="duty-quick-edit" id="dqNightElec" contenteditable="true" spellcheck="false">'+dutyCleanHtml(rec.nightElec||'')+'</div></div>'
+    +'</div><div class="duty-quick-actions"><button class="btn primary" onclick="dutyApplyQuickToSheet()">양식에 반영</button><button class="btn ok-btn" onclick="dutyApplyQuickToSheet();saveDutyDoc()">반영 후 저장</button></div></div>';
+}
 function renderDutyDoc(mode,id){
   const modal=document.getElementById('schedModal'), box=document.getElementById('schedModalBox'); if(!modal||!box)return;
   const type=dutyDocType||'daily', title=type==='daily'?'일일 업무일지':'당직 인수인계일지';
@@ -6324,10 +6679,10 @@ function renderDutyDoc(mode,id){
     html+=docs.length?docs.map(function(d){return '<div class="duty-list-card"><div class="duty-list-card-title">'+esc(d.date||'날짜없음')+' · '+esc(d.worker||'근무자 미입력')+'</div><div class="duty-list-card-sub">'+esc(d.summary||'')+'</div><div class="action-row" style="margin-top:8px"><button class="btn sm" onclick="renderDutyDoc(\'form\',\''+d.id+'\')">수정</button><button class="btn sm ghost" onclick="printDutyDoc(\''+d.id+'\')">출력</button><button class="btn sm danger" onclick="deleteDutyDoc(\''+d.id+'\')">삭제</button></div></div>';}).join(''):'<div class="empty">저장된 문서가 없습니다</div>';
   }else{
     rec=rec||{};
-    html+=dutyToolbar()+'<div class="duty-editor-wrap">'+(type==='daily'?dutyDailySheet(rec,true):dutyHandoverSheet(rec,true))+'</div>'
-      +'<div class="action-row" style="margin-top:12px"><button class="btn primary" onclick="saveDutyDoc()">저장</button><button class="btn ghost" onclick="printDutyDoc(dutyEditId)">출력</button><button class="btn" onclick="dutyEditId=null;renderDutyDoc(\'form\')">초기화</button></div>';
+    html+=dutyEasyEditor(rec,type)+'<div class="duty-editor-wrap fit-mobile">'+(type==='daily'?dutyDailySheet(rec,true):dutyHandoverSheet(rec,true))+'</div><div class="duty-preview-note">※ 모바일에서는 위 간편입력에 작성한 뒤 양식에 반영하세요. 아래 양식은 출력 위치 확인용 미리보기입니다.</div>'
+      +'<div class="action-row" style="margin-top:12px"><button class="btn primary" onclick="dutyApplyQuickToSheet();saveDutyDoc()">저장</button><button class="btn ghost" onclick="dutyApplyQuickToSheet();printDutyDoc(dutyEditId)">출력</button><button class="btn" onclick="dutyEditId=null;renderDutyDoc(\'form\')">초기화</button></div>';
   }
-  box.innerHTML=html; modal.classList.remove('hidden'); dutyBindEditors(); try{history.pushState({popup:'dutyDoc'},'',location.href);}catch(e){}
+  box.innerHTML=html; modal.classList.remove('hidden'); dutyBindEditors(); dutyBindQuickEditors(); dutyInitFloatingColorbar(); dutyFitPreview(); setTimeout(dutyFitPreview,60); try{history.pushState({popup:'dutyDoc'},'',location.href);}catch(e){}
 }
 function dutyCollectCurrent(){
   const type=dutyDocType||'daily';
