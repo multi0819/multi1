@@ -28,7 +28,7 @@ const FIREBASE_CONFIG = {
 /* ══════════════════════════════════════════════════════════════ */
 
 import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, get, remove, child, onValue }
+import { getDatabase, ref, set, get, remove, child, onValue, query, orderByChild, equalTo }
                                                 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const _fbApp = initializeApp(FIREBASE_CONFIG);
@@ -43,6 +43,9 @@ window._fbGet   = get;
 window._fbChild = child;
 window._fbRemove = remove;
 window._fbOnValue = onValue;
+window._fbQuery = query;
+window._fbOrderByChild = orderByChild;
+window._fbEqualTo = equalTo;
 
 /* 연결 상태 표시 */
 import { getDatabase as gdb2, ref as ref2, onValue as ov2 }
@@ -167,6 +170,23 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
   .sc .sv{font-size:16px}
 }
 
+
+/* ── 접속자 확인 / 권한 승인 ── */
+.auth-lock{position:fixed;inset:0;z-index:9999;background:rgba(3,7,18,.94);display:flex;align-items:center;justify-content:center;padding:18px}
+.auth-lock.hidden{display:none}
+.auth-box{width:min(420px,100%);background:linear-gradient(180deg,#1f2937,#111827);border:1px solid rgba(148,163,184,.28);border-radius:22px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.45)}
+.auth-title{font-size:20px;font-weight:950;margin-bottom:6px;letter-spacing:-.8px}
+.auth-desc{font-size:12px;color:var(--text2);line-height:1.65;margin-bottom:13px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.auth-tabs button{border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:10px 8px;font-size:13px;font-weight:900;color:var(--text2)}
+.auth-tabs button.active{background:var(--elec);border-color:var(--elec);color:#fff}
+.auth-row{display:flex;gap:8px;margin-top:8px}
+.auth-help{font-size:11px;color:var(--text3);line-height:1.55;margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:9px 10px}
+.auth-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(148,163,184,.2);background:rgba(255,255,255,.05);border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;color:var(--text2);margin-top:3px}
+.auth-badge.ok{color:#86efac;border-color:rgba(34,197,94,.32);background:rgba(34,197,94,.08)}
+.auth-badge.pending{color:#fbbf24;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+.auth-mini-btn{border:1px solid rgba(148,163,184,.2);background:rgba(255,255,255,.05);border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;color:var(--text2);margin-left:4px}
+
 /* ── 홈화면 ── */
 #homeScreen{
   position:fixed;left:0;right:0;bottom:0;
@@ -248,6 +268,10 @@ button,input,select,textarea{font:inherit;outline:none;color:var(--text)}
   object-fit:fill;
   object-position:center center;
 }
+
+.dc-title-fallback{position:absolute;left:10px;right:10px;top:18px;text-align:center;font-size:24px;font-weight:950;color:#0f172a;letter-spacing:-.8px;z-index:1;text-shadow:0 1px 0 rgba(255,255,255,.65)}
+.dc-img+.dc-title-fallback{opacity:.92}
+.dc-img:not([style*="display: none"])+.dc-title-fallback{opacity:.18;color:#64748b}
 .dc-badges{
   position:absolute;
   top:8px;
@@ -1590,6 +1614,40 @@ body{
 </style>
 </head>
 <body spellcheck="false">
+<!-- 접속자 확인 / 권한 승인 -->
+<div id="accessLock" class="auth-lock hidden">
+  <div class="auth-box">
+    <div class="auth-title">🔐 접속자 확인</div>
+    <div class="auth-desc">처음 1회 본인확인 후 PIN을 등록합니다. 권한은 관리자 승인 후 적용됩니다. 미접속 상태에서는 저장/삭제가 제한됩니다.</div>
+    <div class="auth-tabs">
+      <button id="authLoginTab" class="active" type="button">기존 접속</button>
+      <button id="authJoinTab" type="button">처음 등록</button>
+    </div>
+    <div id="authLoginPane">
+      <div class="field"><label>접속자</label><select class="sel" id="authUserSelect"></select></div>
+      <div class="field"><label>PIN / 비밀번호</label><input class="inp" id="authPin" type="password" inputmode="numeric" maxlength="12" placeholder="등록한 PIN 입력"></div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);margin:4px 0 10px"><input type="checkbox" id="authRemember" style="width:16px;height:16px"> 개인 모바일로 자동접속 저장</label>
+      <button class="btn primary" id="authLoginBtn" style="width:100%">접속</button>
+    </div>
+    <div id="authJoinPane" style="display:none">
+      <div class="field"><label>이름</label><input class="inp" id="authName" placeholder="이름 입력"></div>
+      <div class="grid2">
+        <div class="field"><label>방재실</label><select class="sel" id="authRoom"><option value="1">1방재</option><option value="2">2방재</option></select></div>
+        <div class="field"><label>파트</label><select class="sel" id="authPart"><option value="elec">전기</option><option value="mech">기계</option><option value="arch">건축</option><option value="gen">일반</option></select></div>
+        <div class="field"><label>요청권한</label><select class="sel" id="authRole"><option value="user">일반</option><option value="partManager">중간관리자</option><option value="admin">총괄관리자</option></select></div>
+      </div>
+      <div class="field"><label>PIN 생성</label><input class="inp" id="authNewPin" type="password" inputmode="numeric" maxlength="12" placeholder="4~12자리"></div>
+      <button class="btn primary" id="authJoinBtn" style="width:100%">등록</button>
+      <div id="authJoinStatus" style="display:none;margin-top:8px;font-size:12px;font-weight:800;color:#93c5fd;text-align:center">등록 처리중...</div>
+    </div>
+    <div class="auth-help">
+      · 개인 모바일: 자동접속 저장 가능<br>
+      · 공용PC: 자동접속 저장하지 말고 매번 PIN 입력<br>
+      · 신규 계정은 관리자 승인 전까지 조회만 가능, 저장·삭제는 제한됩니다.
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <div class="sidebar" id="sidebar">
@@ -1626,6 +1684,11 @@ body{
       <span class="sidebar-item-text">당직 인수인계일지</span>
     </button>
     <!-- 냉동기 점검일지는 기계 하부메뉴로 이동 -->
+    <button class="sidebar-item" id="accessAdminMenu" onclick="openAccessAdmin()" style="display:none">
+      <span class="si-icon">🔐</span>
+      <span class="sidebar-item-text">접속자 승인관리</span>
+      <span class="sidebar-item-badge" id="accessPendingBadge" style="display:none">0</span>
+    </button>
     <div class="sidebar-divider"></div>
     <button class="sidebar-item" onclick="goHome();closeSidebar()">
       <span class="si-icon">🏠</span>
@@ -1662,6 +1725,7 @@ body{
           <div id="fbStatusDot" style="width:6px;height:6px;border-radius:50%;background:#ef4444;flex:0 0 auto;transition:background .3s"></div>
           <span id="fbStatusLbl" style="font-size:9px;color:var(--text3);font-weight:700">연결중...</span>
         </div>
+        <div><span id="accessUserBadge" class="auth-badge pending">미접속</span><button id="accessAdminQuick" class="auth-mini-btn" type="button" onclick="openAccessAdmin()" style="display:none">권한관리</button><button id="accessLogoutBtn" class="auth-mini-btn" type="button" style="display:none">변경</button></div>
       </div>
       <button class="menu-btn" onclick="openSidebar()" style="font-size:20px">≡</button>
     </div>
@@ -2205,6 +2269,14 @@ body{
   <div class="modal-box" id="schedModalBox"></div>
 </div>
 
+<div class="modal-overlay hidden" id="accessAdminModal">
+  <div class="modal-box">
+    <div class="modal-title">🔐 접속자 승인관리 <button class="modal-close" onclick="closeAccessAdmin()">✕</button></div>
+    <div class="panel-desc" style="margin-bottom:10px">관리자만 볼 수 있습니다. 신규 등록자는 승인 전까지 조회만 가능합니다.</div>
+    <div id="accessAdminList"></div>
+  </div>
+</div>
+
 <!-- 통계 팝업 -->
 <div class="copy-popup hidden" id="statPopup">
   <div class="copy-box" style="height:92dvh;max-height:92dvh;overflow-y:auto;padding-bottom:calc(48px + env(safe-area-inset-bottom,0px))">
@@ -2237,7 +2309,7 @@ body{
 
 /* ════ CONFIG ════ */
 const DB_NAME='facility-v3',DB_VER=3;
-const STORES={works:'works',externalWorks:'externalWorks',companies:'companies',locations:'locations',receivers:'receivers',writers:'writers',schedules:'schedules',taskLogs:'taskLogs',notices:'notices',staffMembers:'staffMembers',shiftLogs:'shiftLogs',mechForms:'mechForms'};
+const STORES={works:'works',externalWorks:'externalWorks',companies:'companies',locations:'locations',receivers:'receivers',writers:'writers',schedules:'schedules',taskLogs:'taskLogs',notices:'notices',staffMembers:'staffMembers',shiftLogs:'shiftLogs',mechForms:'mechForms',accessUsers:'accessUsers'};
 
 const DOMAINS=[
   {id:'arch',label:'건축',icon:'🏗',cls:'arch',desc:'건물 구조·마감·방수·도장·창호',
@@ -2257,7 +2329,7 @@ const REPEAT_LABELS={none:'단발',daily:'매일',weekly:'매주',biweekly:'격�
 const WEEKDAYS=['일','월','화','수','목','금','토'];
 
 /* ════ STATE ════ */
-let state={works:[],externalWorks:[],companies:[],locations:[],receivers:[],writers:[],schedules:[],taskLogs:[],notices:[],staffMembers:[],shiftLogs:[],mechForms:[]};
+let state={works:[],externalWorks:[],companies:[],locations:[],receivers:[],writers:[],schedules:[],taskLogs:[],notices:[],staffMembers:[],shiftLogs:[],mechForms:[],accessUsers:[]};
 let curDomain=0,editWorkId=null,editExtId=null,workMode='form',extMode='form';
 let wPhotos=[],extPhotos=[];
 let calYear,calMonth,calSelected;
@@ -2292,44 +2364,391 @@ function clearDraft(schedId){
 function _fbdb(){return window._fbDB;}
 function _ref(path){return window._fbRef(_fbdb(), path);}
 
-/** 스토어(컬렉션) 전체 읽기 → 배열 반환 */
+/* ════ 접속자 확인 / 결재권자 승인 권한 ════ */
+const ACCESS_STORE_KEY='facilityAccessUserV2';
+const ACCESS_STORE_OLD_KEYS=['facilityAccessUserV1','facilityAccessUser'];
+const ACCESS_REMEMBER_KEY='facilityAccessRemember';
+let currentAccessUser=null;
+let accessRestorePending=false;
+function accessStorageGet(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k)||'';}catch(e){return '';} }
+function accessStorageSet(k,v,persist){try{sessionStorage.setItem(k,v); if(persist)localStorage.setItem(k,v); else localStorage.removeItem(k);}catch(e){} }
+function accessStorageRemove(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k);}catch(e){} }
+function isMobileBrowser(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');}
+function setRememberDefault(){const cb=document.getElementById('authRemember'); if(!cb)return; const saved=accessStorageGet(ACCESS_REMEMBER_KEY); cb.checked=saved? saved==='1' : isMobileBrowser();}
+
+function simpleHash(str){
+  let h=2166136261; str=String(str||'');
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);}
+  return (h>>>0).toString(16);
+}
+function accessPinHash(pin,salt){return simpleHash(String(salt||'')+'|'+String(pin||''));}
+function accessPart(u){return String((u&&u.part)||'').trim();}
+function isLegacyManager(u){return !!(u&&u.role==='manager'&&!u.managerScope);}
+function isAccessApproved(){return !!(currentAccessUser&&currentAccessUser.roleApproved);}
+function isAccessAdmin(){return !!(currentAccessUser&&currentAccessUser.roleApproved&&(currentAccessUser.role==='admin'||isLegacyManager(currentAccessUser)));}
+function isAccessPartManager(){return !!(currentAccessUser&&currentAccessUser.roleApproved&&(currentAccessUser.role==='partManager'||currentAccessUser.role==='middleManager'));}
+function isAccessManager(){return isAccessAdmin()||isAccessPartManager();}
+function accessRoleLabel(u){
+  if(!u)return '미접속';
+  if(!u.roleApproved)return '승인대기';
+  if(u.role==='admin'||isLegacyManager(u))return '총괄관리자';
+  if(u.role==='partManager'||u.role==='middleManager')return '중간관리자';
+  return '일반';
+}
+function accessRoom(u){
+  if(!u)return '';
+  if(u.role==='admin'||isLegacyManager(u))return '';
+  if(u.role==='partManager'||u.role==='middleManager')return '';
+  const raw=(u.room??u.roomNo??u.fireRoom??u.dutyRoom??u.disasterRoom??u.workRoom??'');
+  const m=String(raw).match(/[12]/);
+  return m?m[0]:'';
+}
+function accessRoomLabel(u){
+  if(!u)return '방재실 미지정';
+  if(u.role==='admin'||isLegacyManager(u))return '전체';
+  if(u.role==='partManager'||u.role==='middleManager'){const pm={elec:'전기',mech:'기계',arch:'건축',gen:'일반'};return (pm[accessPart(u)]||accessPart(u)||'파트')+' 중간관리';}
+  const r=accessRoom(u);
+  return r?r+'방재':'방재실 미지정';
+}
+function isRoomScopedStore(store){return store!==STORES.accessUsers;}
+function isConstructionStore(store){return store===STORES.externalWorks;}
+function itemDomain(item){return String((item&&item.domain)||'').trim();}
+function canAccessItemRoom(item,store){
+  if(!isAccessApproved())return false;
+  if(isAccessAdmin())return true;
+  if(isAccessPartManager()){
+    if(isConstructionStore(store))return true; // 공사관리는 중간관리자 파트 제한 제외
+    const part=accessPart(currentAccessUser);
+    return !part || !itemDomain(item) || itemDomain(item)===part;
+  }
+  const room=accessRoom(currentAccessUser);
+  if(!room)return false;
+  return String((item&&item.room)||'')===room;
+}
+function scopedList(store,list){
+  list=Array.isArray(list)?list:[];
+  if(!isRoomScopedStore(store) || !isAccessApproved() || isAccessAdmin())return list;
+  if(isAccessPartManager()){
+    if(isConstructionStore(store))return list;
+    const part=accessPart(currentAccessUser);
+    return part?list.filter(item=>!itemDomain(item)||itemDomain(item)===part):list;
+  }
+  const room=accessRoom(currentAccessUser);
+  if(!room)return [];
+  return list.filter(item=>String((item&&item.room)||'')===room);
+}
+function applyAccessMeta(store,item){
+  if(!item||store===STORES.accessUsers||!currentAccessUser)return item;
+  const out=Object.assign({},item,{updatedBy:currentAccessUser.id,updatedByName:currentAccessUser.name,updatedRoom:accessRoom(currentAccessUser),updatedRoomName:accessRoomLabel(currentAccessUser),updatedPart:accessPart(currentAccessUser)});
+  if(!out.createdBy){out.createdBy=currentAccessUser.id;out.createdByName=currentAccessUser.name;}
+  if(!out.createdRoom){out.createdRoom=accessRoom(currentAccessUser);out.createdRoomName=accessRoomLabel(currentAccessUser);}
+  if(!out.createdPart)out.createdPart=accessPart(currentAccessUser);
+  if(!out.writerName)out.writerName=currentAccessUser.name||'';
+  if(!out.receiverName)out.receiverName=currentAccessUser.name||'';
+  const curRoom=accessRoom(currentAccessUser);
+  if(curRoom && (!out.room || !isAccessManager())){out.room=curRoom;out.roomName=curRoom+'방재';}
+  return out;
+}
+function syncCurrentAccessUser(){
+  if(!currentAccessUser || !currentAccessUser.id)return;
+  const fresh=(state.accessUsers||[]).find(x=>x.id===currentAccessUser.id);
+  if(fresh){currentAccessUser=fresh;}
+  else{currentAccessUser=null;accessStorageRemove(ACCESS_STORE_KEY);ACCESS_STORE_OLD_KEYS.forEach(accessStorageRemove)}
+}
+function openAccessLogin(){showAccessLock();}
+function renderAccessBadge(){
+  const b=document.getElementById('accessUserBadge'); const out=document.getElementById('accessLogoutBtn'); const adminQuick=document.getElementById('accessAdminQuick');
+  const adminMenu=document.getElementById('accessAdminMenu'); const pendingBadge=document.getElementById('accessPendingBadge');
+  if(!b)return;
+  if(!currentAccessUser){
+    b.textContent=accessRestorePending?'접속 확인중':'미접속';
+    b.className='auth-badge pending';
+    b.title=accessRestorePending?'저장된 자동접속 정보를 확인중입니다':'눌러서 접속자 확인';
+    b.style.cursor='pointer';
+    if(out){out.style.display='inline-flex';out.textContent=accessRestorePending?'확인중':'접속';}
+    if(adminQuick)adminQuick.style.display='none';
+    if(adminMenu)adminMenu.style.display='none';
+    if(pendingBadge)pendingBadge.style.display='none';
+    return;
+  }
+  b.textContent=(currentAccessUser.name||'접속자')+' · '+accessRoomLabel(currentAccessUser)+' · '+accessRoleLabel(currentAccessUser);
+  b.className='auth-badge '+(currentAccessUser.roleApproved?'ok':'pending');
+  b.title='현재 접속자';b.style.cursor='default';
+  if(out){out.style.display='inline-flex';out.textContent='변경';}
+  if(adminQuick)adminQuick.style.display=isAccessAdmin()?'inline-flex':'none';
+  const pending=(state.accessUsers||[]).filter(u=>!u.roleApproved).length;
+  if(adminMenu)adminMenu.style.display=isAccessAdmin()?'flex':'none';
+  if(pendingBadge){pendingBadge.textContent=String(pending);pendingBadge.style.display=(isAccessAdmin()&&pending)?'inline-block':'none';}
+}
+function accessStatus(id,msg,show){
+  const el=document.getElementById(id); if(!el)return;
+  el.textContent=msg||''; el.style.display=show?'block':'none';
+}
+function openAccessAdmin(){
+  if(!isAccessAdmin()){alert('접속자 승인관리는 총괄관리자만 가능합니다.');return;}
+  renderAccessAdmin();
+  document.getElementById('accessAdminModal')?.classList.remove('hidden');
+  closeSidebar();
+  try{history.pushState({screen:'accessAdmin'},'',location.href);}catch(e){}
+}
+function closeAccessAdmin(){document.getElementById('accessAdminModal')?.classList.add('hidden');}
+function renderAccessAdmin(){
+  const box=document.getElementById('accessAdminList'); if(!box)return;
+  const list=(state.accessUsers||[]).slice().sort((a,b)=>(a.roleApproved===b.roleApproved?0:(a.roleApproved?1:-1))||(a.name||'').localeCompare(b.name||''));
+  if(!list.length){box.innerHTML='<div class="panel">등록된 접속자가 없습니다.</div>';return;}
+  box.innerHTML=list.map(u=>{
+    const status=accessRoleLabel(u);
+    const partMap={elec:'전기',mech:'기계',arch:'건축',gen:'일반'};
+    const roomSel='<select class="sel" id="accessRoom_'+esc(u.id)+'" style="height:38px"><option value="" '+(!accessRoom(u)?'selected':'')+'>방재실 없음</option><option value="1" '+(String(u.room||'')==='1'?'selected':'')+'>1방재</option><option value="2" '+(String(u.room||'')==='2'?'selected':'')+'>2방재</option></select>';
+    const curRole=(u.role==='manager'&&!u.managerScope)?'admin':(u.role||'user');
+    const roleSel='<select class="sel" id="accessRole_'+esc(u.id)+'" style="height:38px"><option value="user" '+(curRole==='user'?'selected':'')+'>일반</option><option value="partManager" '+(curRole==='partManager'||curRole==='middleManager'?'selected':'')+'>중간관리자</option><option value="admin" '+(curRole==='admin'?'selected':'')+'>총괄관리자</option></select>';
+    const approveBtn=!u.roleApproved?'<button class="btn sm primary" onclick="approveAccessUser(\''+esc(u.id)+'\')">승인</button>':'<button class="btn sm" onclick="approveAccessUser(\''+esc(u.id)+'\')">권한변경</button>';
+    const revokeBtn=u.roleApproved?'<button class="btn sm warn" onclick="revokeAccessUser(\''+esc(u.id)+'\')">승인취소</button>':'';
+    const delBtn='<button class="btn sm danger" onclick="deleteAccessUser(\''+esc(u.id)+'\')">삭제</button>';
+    return '<div class="panel" style="margin-bottom:8px;padding:12px;border-radius:16px">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px"><div><b style="font-size:16px">'+esc(u.name||'')+'</b><div style="font-size:12px;color:var(--text2);margin-top:3px">'+esc(accessRoomLabel(u))+' · '+esc(partMap[u.part]||u.part||'')+' · '+esc(status)+' · 요청: '+esc(u.requestedRole==='admin'?'총괄관리자':(u.requestedRole==='partManager'||u.requestedRole==='manager'?'중간관리자':'일반'))+'</div></div><span class="auth-badge '+(u.roleApproved?'ok':'pending')+'">'+esc(status)+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr auto auto auto;gap:6px;align-items:center">'+roomSel+roleSel+approveBtn+revokeBtn+delBtn+'</div>'
+      +'</div>';
+  }).join('');
+}
+async function approveAccessUser(id){
+  if(!isAccessAdmin())return alert('총괄관리자만 처리할 수 있습니다.');
+  const u=(state.accessUsers||[]).find(x=>x.id===id); if(!u)return;
+  const role=document.getElementById('accessRole_'+id)?.value||'user';
+  let room=document.getElementById('accessRoom_'+id)?.value||u.room||'1';
+  if(role==='admin'||role==='partManager')room='';
+  const obj=Object.assign({},u,{role,managerScope:(role==='partManager'?'part':(role==='admin'?'all':'')),room,roomName:room?room+'방재':'',roleApproved:true,approvedBy:currentAccessUser.name||currentAccessUser.id,approvedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+  await window._fbSet(_ref(STORES.accessUsers+'/'+id),obj);
+  state.accessUsers=await dbAll(STORES.accessUsers);
+  if(currentAccessUser&&currentAccessUser.id===id)currentAccessUser=obj;
+  renderAccessAdmin();fillAccessUsers();renderAccessBadge();alert('승인 처리 완료되었습니다.');
+}
+async function revokeAccessUser(id){
+  if(!isAccessAdmin())return alert('총괄관리자만 처리할 수 있습니다.');
+  if(currentAccessUser&&currentAccessUser.id===id)return alert('현재 접속 중인 본인 관리자 권한은 취소할 수 없습니다.');
+  const u=(state.accessUsers||[]).find(x=>x.id===id); if(!u)return;
+  if(!confirm((u.name||'접속자')+'님의 승인을 취소하시겠습니까?'))return;
+  const obj=Object.assign({},u,{roleApproved:false,approvedBy:'',approvedAt:'',updatedAt:new Date().toISOString()});
+  await window._fbSet(_ref(STORES.accessUsers+'/'+id),obj);
+  state.accessUsers=await dbAll(STORES.accessUsers);
+  renderAccessAdmin();fillAccessUsers();renderAccessBadge();alert('승인 취소되었습니다.');
+}
+async function deleteAccessUser(id){
+  if(!isAccessAdmin())return alert('총괄관리자만 처리할 수 있습니다.');
+  if(currentAccessUser&&currentAccessUser.id===id)return alert('현재 접속 중인 본인은 삭제할 수 없습니다.');
+  const u=(state.accessUsers||[]).find(x=>x.id===id); if(!u)return;
+  if(!confirm((u.name||'접속자')+'님을 삭제하시겠습니까?'))return;
+  await window._fbRemove(_ref(STORES.accessUsers+'/'+id));
+  state.accessUsers=await dbAll(STORES.accessUsers);
+  renderAccessAdmin();fillAccessUsers();renderAccessBadge();alert('삭제되었습니다.');
+}
+function fillAccessUsers(){
+  const sel=document.getElementById('authUserSelect'); if(!sel)return;
+  const list=(state.accessUsers||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  sel.innerHTML=list.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name||'')+' · '+esc(accessRoleLabel(u))+'</option>').join('')||'<option value="">등록된 접속자 없음</option>';
+}
+function showAccessLock(){fillAccessUsers();const el=document.getElementById('accessLock');if(el){el.classList.remove('hidden');el.style.display='flex';}}
+function hideAccessLock(){const el=document.getElementById('accessLock');if(el){el.classList.add('hidden');el.style.display='none';}}
+function requireAccessWrite(action){
+  if(accessRestorePending){alert('자동접속 확인 중입니다. 잠시 후 다시 시도하세요.');return false;}
+  if(!currentAccessUser){showAccessLock();alert('접속자 확인 후 '+action+'할 수 있습니다.');return false;}
+  if(!currentAccessUser.roleApproved){alert('결재권자 승인 전입니다. 현재는 조회만 가능합니다.');return false;}
+  return true;
+}
+function requireAccessManager(action){
+  if(!requireAccessWrite(action))return false;
+  if(!isAccessManager()){alert(action+' 권한은 승인된 관리자만 가능합니다.');return false;}
+  return true;
+}
+function canWriteStore(store){return store===STORES.accessUsers || isAccessApproved();}
+function canDeleteStore(store){return store===STORES.accessUsers || isAccessApproved();}
+function accessBusy(btnId, busy, text){
+  const btn=document.getElementById(btnId);
+  if(!btn)return;
+  if(busy){btn.dataset.oldText=btn.textContent;btn.disabled=true;btn.textContent=text||'처리중...';}
+  else{btn.disabled=false;btn.textContent=btn.dataset.oldText||btn.textContent;delete btn.dataset.oldText;}
+}
+
+function persistAccessUser(u, remember){
+  if(!u||!u.id)return;
+  const userCache={id:u.id,name:u.name||'',room:accessRoom(u)||u.room||'',roomName:u.roomName||accessRoomLabel(u),part:u.part||'',role:u.role||'user',managerScope:u.managerScope||'',roleApproved:!!u.roleApproved,pinHash:u.pinHash||'',salt:u.salt||''};
+  const payload=JSON.stringify({id:u.id,pinHash:u.pinHash,user:userCache,ts:Date.now()});
+  accessStorageSet(ACCESS_STORE_KEY,payload,!!remember);
+  accessStorageSet(ACCESS_REMEMBER_KEY,remember?'1':'0',true);
+  ACCESS_STORE_OLD_KEYS.forEach(accessStorageRemove);
+}
+function clearSavedAccess(){
+  accessStorageRemove(ACCESS_STORE_KEY);
+  ACCESS_STORE_OLD_KEYS.forEach(accessStorageRemove);
+  accessStorageSet(ACCESS_REMEMBER_KEY,'0',true);
+}
+async function accessLogin(){
+  const id=document.getElementById('authUserSelect')?.value||'';
+  const pin=document.getElementById('authPin')?.value||'';
+  const u=(state.accessUsers||[]).find(x=>x.id===id);
+  if(!u){alert('접속자를 선택하세요.');return;}
+  if(u.pinHash!==accessPinHash(pin,u.salt)){alert('PIN이 맞지 않습니다.');return;}
+  accessBusy('authLoginBtn',true,'접속 처리중...');
+  try{
+    currentAccessUser=u;
+    persistAccessUser(u, !!document.getElementById('authRemember')?.checked);
+    hideAccessLock();renderAccessBadge();
+    alert(u.roleApproved?'접속 완료되었습니다.':'접속 확인 완료. 단, 결재권자 승인 전이라 조회만 가능합니다.');
+  }finally{accessBusy('authLoginBtn',false);}
+}
+async function accessJoin(){
+  const name=(document.getElementById('authName')?.value||'').trim();
+  const room=document.getElementById('authRoom')?.value||'1';
+  const part=document.getElementById('authPart')?.value||'gen';
+  const requestedRole=document.getElementById('authRole')?.value||'user';
+  const pin=document.getElementById('authNewPin')?.value||'';
+  if(!name){alert('이름을 입력하세요.');return;}
+  if(pin.length<4){alert('PIN은 4자리 이상으로 입력하세요.');return;}
+  const salt=uid();
+  const u={id:uid(),name,room,roomName:room+'방재',part,role:'user',requestedRole,roleApproved:false,approvedBy:'',approvedAt:'',salt,pinHash:accessPinHash(pin,salt),createdAt:new Date().toISOString()};
+  accessBusy('authJoinBtn',true,'등록 처리중...');accessStatus('authJoinStatus','등록 처리중입니다. 잠시만 기다려 주세요...',true);
+  try{
+    await window._fbSet(_ref(STORES.accessUsers+'/'+u.id),u);
+    state.accessUsers=await dbAll(STORES.accessUsers);
+    fillAccessUsers();
+    currentAccessUser=(state.accessUsers||[]).find(x=>x.id===u.id)||u;
+    persistAccessUser(currentAccessUser, !!document.getElementById('authRemember')?.checked);
+    hideAccessLock(); renderAccessBadge();
+    alert('등록 완료되었습니다. 관리자 승인 전이므로 조회만 가능합니다.');
+  }catch(e){
+    alert('등록 처리 중 오류가 발생했습니다. 네트워크 상태를 확인한 후 다시 시도하세요.');
+    throw e;
+  }finally{accessBusy('authJoinBtn',false);accessStatus('authJoinStatus','',false);}
+}
+function bindAccessAuth(){
+  setRememberDefault();
+  const lt=document.getElementById('authLoginTab'), jt=document.getElementById('authJoinTab'), lp=document.getElementById('authLoginPane'), jp=document.getElementById('authJoinPane');
+  if(lt)lt.onclick=function(){lt.classList.add('active');jt.classList.remove('active');lp.style.display='block';jp.style.display='none';};
+  if(jt)jt.onclick=function(){jt.classList.add('active');lt.classList.remove('active');jp.style.display='block';lp.style.display='none';};
+  document.getElementById('authLoginBtn')?.addEventListener('click',accessLogin);
+  document.getElementById('authJoinBtn')?.addEventListener('click',accessJoin);
+  document.getElementById('accessLogoutBtn')?.addEventListener('click',function(){
+    if(currentAccessUser){clearSavedAccess();currentAccessUser=null;renderAccessBadge();}
+    showAccessLock();
+  });
+  document.getElementById('accessUserBadge')?.addEventListener('click',function(){if(!currentAccessUser)showAccessLock();});
+}
+
+function getSavedAccessPayload(){
+  const rawList=[accessStorageGet(ACCESS_STORE_KEY)].concat(ACCESS_STORE_OLD_KEYS.map(accessStorageGet)).filter(Boolean);
+  for(const raw of rawList){
+    try{const saved=JSON.parse(raw); if(saved&&saved.id)return saved;}catch(e){}
+  }
+  return null;
+}
+function restoreCachedAccessFast(){
+  const saved=getSavedAccessPayload();
+  if(!saved){accessRestorePending=false;return false;}
+  accessRestorePending=true;
+  if(saved.user&&saved.user.id){
+    currentAccessUser=Object.assign({},saved.user,{_cached:true});
+    renderAccessBadge();
+    hideAccessLock();
+  }else{
+    currentAccessUser=null;
+    renderAccessBadge();
+  }
+  return true;
+}
+
+async function tryAutoAccess(){
+  try{
+    const rawList=[accessStorageGet(ACCESS_STORE_KEY)].concat(ACCESS_STORE_OLD_KEYS.map(accessStorageGet)).filter(Boolean);
+    for(const raw of rawList){
+      let saved=null;
+      try{saved=JSON.parse(raw);}catch(e){saved=null;}
+      if(!saved||!saved.id)continue;
+      const u=(state.accessUsers||[]).find(x=>x.id===saved.id && (!saved.pinHash || x.pinHash===saved.pinHash));
+      if(u){
+        accessRestorePending=false;
+        currentAccessUser=u;
+        persistAccessUser(u, accessStorageGet(ACCESS_REMEMBER_KEY)!=='0');
+        renderAccessBadge();
+        hideAccessLock();
+        return true;
+      }
+    }
+    accessRestorePending=false;
+    clearSavedAccess();
+    currentAccessUser=null;
+    renderAccessBadge();
+    return false;
+  }catch(e){accessRestorePending=false;renderAccessBadge();return false;}
+}
+
+
+/** 스토어(컬렉션) 읽기 → 배열 반환
+ *  - 일반 사용자는 Firebase 단계에서 본인 방재실(room) 자료만 조회합니다.
+ *  - 관리자는 전체 자료를 조회합니다.
+ *  - 접속자 목록은 권한 확인용이므로 전체 조회합니다.
+ */
+function dbReadRefForStore(store){
+  if(isRoomScopedStore(store) && isAccessApproved() && !isAccessAdmin() && !isAccessPartManager()){
+    const room=accessRoom(currentAccessUser);
+    if(room && window._fbQuery && window._fbOrderByChild && window._fbEqualTo){
+      return window._fbQuery(_ref(store), window._fbOrderByChild('room'), window._fbEqualTo(room));
+    }
+  }
+  return _ref(store);
+}
 const dbAll = async (store) => {
-  const snap = await window._fbGet(_ref(store));
+  const snap = await window._fbGet(dbReadRefForStore(store));
   if(!snap.exists()) return [];
   const val = snap.val();
-  // Firebase는 객체로 저장됨 → 배열로 변환
-  return Object.values(val);
+  return scopedList(store,Object.values(val));
 };
 
 /** 아이템 저장(추가 또는 수정) */
 const dbPut = async (store, item) => {
   if(!item || !item.id) throw new Error('id 없음');
+  if(!canWriteStore(store)){alert('결재권자 승인 전에는 저장할 수 없습니다.');throw new Error('결재권자 승인 전에는 저장할 수 없습니다.');}
+  if(store!==STORES.accessUsers && currentAccessUser){
+    const oldSnap=await window._fbGet(_ref(store + '/' + item.id));
+    if(oldSnap.exists() && !canAccessItemRoom(oldSnap.val(),store)){alert('다른 방재실 자료는 수정할 수 없습니다.');throw new Error('다른 방재실 자료는 수정할 수 없습니다.');}
+    item=applyAccessMeta(store,item);
+  }
   await window._fbSet(_ref(store + '/' + item.id), item);
 };
 
 /** 아이템 삭제 */
 const dbDel = async (store, id) => {
+  if(!canDeleteStore(store)){alert('삭제 권한이 없습니다. 승인된 접속자만 삭제할 수 있습니다.');throw new Error('삭제 권한이 없습니다. 승인된 접속자만 삭제할 수 있습니다.');}
+  if(store!==STORES.accessUsers){
+    const oldSnap=await window._fbGet(_ref(store + '/' + id));
+    if(oldSnap.exists() && !canAccessItemRoom(oldSnap.val(),store)){alert('다른 방재실 자료는 삭제할 수 없습니다.');throw new Error('다른 방재실 자료는 삭제할 수 없습니다.');}
+  }
   await window._fbRemove(_ref(store + '/' + id));
 };
 
 /** 스토어 전체 삭제 */
 const dbClear = async (store) => {
+  if(store!==STORES.accessUsers && !isAccessAdmin()){alert('전체 삭제/복원은 총괄관리자만 가능합니다.');throw new Error('전체 삭제/복원은 총괄관리자만 가능합니다.');}
+  if(!canDeleteStore(store)){alert('전체 삭제/복원 권한이 없습니다.');throw new Error('전체 삭제/복원 권한이 없습니다.');}
   await window._fbRemove(_ref(store));
 };
 
-/* ── 실시간 동기화: 다른 사용자가 데이터를 변경하면 자동 갱신 ── */
+/* ── 실시간 동기화: 초기속도 우선
+   전체 스토어 onValue 감시는 접속 시 모든 데이터를 다시 내려받아 10초 지연의 원인이 됩니다.
+   현재는 홈 건수에 필요한 핵심 스토어만 감시하고, 화면 진입/새로고침 때 세부자료를 읽습니다. */
 let _realtimeListeners = [];
+let _realtimeTimer = null;
+const CORE_STORES=[STORES.works,STORES.externalWorks,STORES.schedules,STORES.taskLogs,STORES.notices];
+const MASTER_STORES=[STORES.companies,STORES.locations,STORES.receivers,STORES.writers,STORES.staffMembers,STORES.shiftLogs,STORES.mechForms];
+function stopRealtimeSync(){_realtimeListeners.forEach(unsub => unsub && unsub());_realtimeListeners=[];}
 function startRealtimeSync(){
-  // 기존 리스너 제거
-  _realtimeListeners.forEach(unsub => unsub && unsub());
-  _realtimeListeners = [];
-
-  // 모든 스토어 감시
-  Object.values(STORES).forEach(store => {
-    const r = _ref(store);
+  stopRealtimeSync();
+  const listenStores=[STORES.accessUsers].concat(CORE_STORES);
+  listenStores.forEach(store => {
+    const r = (store===STORES.accessUsers)?_ref(store):dbReadRefForStore(store);
     const unsub = window._fbOnValue(r, () => {
-      // 다른 기기에서 데이터 변경 시 자동 로드
-      if(window._realtimeSyncEnabled) loadState();
+      if(!window._realtimeSyncEnabled) return;
+      clearTimeout(_realtimeTimer);
+      _realtimeTimer=setTimeout(()=>loadStateCore({partial:true}),900);
     });
     _realtimeListeners.push(unsub);
   });
@@ -2347,7 +2766,7 @@ const uGroups=()=>[...new Set(state.locations.map(x=>x.group).filter(Boolean))].
 const subsByGroup=g=>state.locations.filter(x=>x.group===g).sort((a,b)=>(a.sub||'').localeCompare(b.sub||''));
 function masterDisplayName(i){
   const base=i.name||`${i.group||''} ${i.sub||''}`.trim();
-  const room=i.room?`${i.room}방재 · `:'';
+  const room=accessRoom(i)?`${accessRoom(i)}방재 · `:(i.roomName?`${i.roomName} · `:'');
   if(i.domain){
     const d=DOMAINS.find(x=>x.id===i.domain);
     return `${room}${d?d.label:i.domain} · ${base}`;
@@ -2710,8 +3129,9 @@ function renderHomeScreen(){
     const bad=state.works.filter(w=>w.domain===c.id&&w.isNormal==='N').length;
     const badge=bad>0 ? '<div class="dc-badges"><span class="dc-pill dc-count '+c.id+'">'+bad+'건</span></div>' : '';
     return '<button class="dc" onclick="openDomainFromHome('+c.idx+')" aria-label="'+c.alt+'">'
-      +'<div class="dc-card">'
-      +'<img class="dc-img" src="'+c.img+'" alt="'+c.alt+'">'
+      +'<div class="dc-card" data-label="'+c.alt+'">'
+      +'<img class="dc-img" src="'+c.img+'" alt="'+c.alt+'" onerror="this.style.display=\'none\'">'
+      +'<div class="dc-title-fallback">'+c.alt+'</div>'
       +badge
       +'</div>'
       +'</button>';
@@ -3095,7 +3515,12 @@ window.rmModalPhoto=function(i){
   if(box)box.innerHTML=modalPhotos.map((src,i)=>`<div class="prev-wrap"><img class="prev-img" src="${src}"><button class="prev-del" onclick="rmModalPhoto(${i})">×</button></div>`).join('');
 };
 
-window.saveTaskLog=async function(schedId,dateStr){
+function dutyWithTimeout(promise,ms){
+  return Promise.race([promise,new Promise(function(_,reject){setTimeout(function(){reject(new Error('timeout'));},ms||2500);})]);
+}
+
+window.saveTaskLog=async function(schedId,dateStr,opts){
+  opts=opts||{};
   if(!_selStatus){alert('정상/이상 여부를 선택해주세요.');return;}
   if(!modalPhotos.length){alert('사진을 1장 이상 첨부해주세요.');return;}
   const note=document.getElementById('tmNote').value.trim()||'없음';
@@ -3111,18 +3536,20 @@ window.saveTaskLog=async function(schedId,dateStr){
   const rAbs2=rptVal('tmAbs2');
   const rChiller=rptVal('tmChiller');
   const rAhuNote=(document.getElementById('tmAhuNote')&&document.getElementById('tmAhuNote').value)||'';
-  await dbPut(STORES.taskLogs,{
+  const savePromise=dbPut(STORES.taskLogs,{
     id:`${dateStr}:${schedId}`,scheduleId:schedId,date:dateStr,
     status:_selStatus,note,photos:modalPhotos,
     taskName:sched?.name||'',domain:sched?.domain||'gen',location:sched?.location||'',
     outTemp:rOut,facility:rFac,block:rBlk,heatNamdo:rHeatNamdo,heatGuptang:rHeatGuptang,heatTemp:rHeatTemp,turbo:rTurbo,abs1:rAbs1,abs2:rAbs2,chiller:rChiller,ahuNote:rAhuNote,
     completedAt:new Date().toISOString()
   });
+  if(opts.quick){await dutyWithTimeout(savePromise,opts.timeoutMs||2500);}else{await savePromise;}
   clearDraft(schedId);
+  if(opts.silent){return true;}
   alert('처리 완료되었습니다.');
   closeModal('taskModal');
-  await loadState();
-  renderCalendar();renderDayPanel();
+  loadState().then(function(){renderCalendar();renderDayPanel();updateHeaderStats();}).catch(function(e){console.warn(e);});
+  return true;
 };
 
 window.deleteTaskLog=async function(schedId,dateStr){
@@ -3142,7 +3569,7 @@ function showProcessOverlay(msg){
     el=document.createElement('div');
     el.id='globalProcessOverlay';
     el.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
-    el.innerHTML='<div style="max-width:320px;width:86%;background:#fff;color:#111827;border-radius:18px;padding:22px 18px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.38);font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif"><div style="font-size:32px;margin-bottom:8px">⏳</div><div id="globalProcessText" style="font-size:19px;font-weight:900;line-height:1.35">처리중입니다…</div><div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.35">이미지 생성 중에는 화면을 닫지 마세요.</div></div>';
+    el.innerHTML='<div style="max-width:320px;width:86%;background:#fff;color:#111827;border-radius:18px;padding:22px 18px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.38);font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif"><div style="font-size:32px;margin-bottom:8px">⏳</div><div id="globalProcessText" style="font-size:19px;font-weight:900;line-height:1.35">처리중입니다…</div><div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.35">미리보기 준비 중입니다. 지연되면 자동으로 계속 진행합니다.</div></div>';
     document.body.appendChild(el);
   }
   const txt=document.getElementById('globalProcessText');
@@ -3179,11 +3606,18 @@ window.kakaoShare=async function(schedId,dateStr){
   var rHN=rptVal('tmHeatNamdo'),rHG=rptVal('tmHeatGuptang'),rHT=rptVal('tmHeatTemp');
   var rTurbo=rptVal('tmTurbo'),rAbs1=rptVal('tmAbs1'),rAbs2=rptVal('tmAbs2');
   var rAhuNote=(document.getElementById('tmAhuNote')&&document.getElementById('tmAhuNote').value)||'';
-  await saveTaskLog(schedId,dateStr);
+  try{
+    await saveTaskLog(schedId,dateStr,{silent:true,quick:true,timeoutMs:2500});
+  }catch(saveErr){
+    console.warn('quick save delayed',saveErr);
+    showToast('보고서는 먼저 생성합니다. 저장 지연 시 백그라운드로 처리됩니다.');
+    saveTaskLog(schedId,dateStr,{silent:true}).catch(function(e){console.warn('background save failed',e);});
+  }
   closeModal('taskModal');
-  showToast('보고서 이미지 생성 중...');
-  // 카톡 공유용 사진 배치: 글자/표가 많은 사진은 1장/줄, 일반 사진은 2장/줄.
-  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'8px',textHeavyAuto:true,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff'});
+  showToast('보고서 미리보기 생성 중...');
+  showProcessOverlay('처리중입니다… 사진 배치를 정리하고 있습니다.');
+  // 카톡 공유용 사진 배치: 일반 사진은 2열 축소, 글자 많은 가로사진은 1열 크게 처리.
+  const photoGrid=await buildOutputPhotoGridHtml(modalPhotos,{gap:'6px',textHeavyAuto:true,generalImgStyle:'width:100%;aspect-ratio:1 / 1;object-fit:cover;border-radius:6px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.16);background:#fff',textImgStyle:'width:100%;height:auto;object-fit:contain;border-radius:6px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.16);background:#fff'});
   function card(label,val,color){return '<div style="background:#fff;border:1.5px solid #bfdbfe;border-radius:10px;padding:11px 13px"><div style="font-size:14px;color:#64748b;margin-bottom:3px;font-weight:600">'+label+'</div><div style="font-size:22px;font-weight:900;color:'+(color||'#111827')+'">'+val+'</div></div>';}
   var reportRows='';
   if(isRpt){
@@ -3251,51 +3685,69 @@ async function buildOutputPhotoGridHtml(photos,opt){
         var landscape=w>=h;
         var textHeavy=false;
         try{
-          var size=96;
+          var size=120;
           var c=document.createElement('canvas');
           c.width=size;c.height=size;
           var ctx=c.getContext('2d',{willReadFrequently:true});
           ctx.drawImage(im,0,0,size,size);
           var data=ctx.getImageData(0,0,size,size).data;
-          var edge=0,total=(size-1)*(size-1),hv=0;
+          var edge=0,total=(size-1)*(size-1),hv=0,light=0,dark=0,grayish=0;
           for(var y=0;y<size-1;y++){
             for(var x=0;x<size-1;x++){
               var i=(y*size+x)*4;
               var ir=(y*size+x+1)*4;
               var id=((y+1)*size+x)*4;
-              var g=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
+              var r=data[i],g0=data[i+1],b0=data[i+2];
+              var g=(r*0.299+g0*0.587+b0*0.114);
               var gr=(data[ir]*0.299+data[ir+1]*0.587+data[ir+2]*0.114);
               var gd=(data[id]*0.299+data[id+1]*0.587+data[id+2]*0.114);
               var dx=Math.abs(g-gr),dy=Math.abs(g-gd);
-              if(dx+dy>34)edge++;
-              if(dx>28||dy>28)hv++;
+              if(dx+dy>30)edge++;
+              if(dx>24||dy>24)hv++;
+              if(g>215)light++;
+              if(g<70)dark++;
+              if(Math.abs(r-g0)<18&&Math.abs(g0-b0)<18)grayish++;
             }
           }
           var edgeRate=edge/total;
           var hvRate=hv/total;
+          var lightRate=light/total;
+          var darkRate=dark/total;
+          var grayRate=grayish/total;
           var ratio=w/h;
-          // 작은 글자·표·모니터 화면 사진은 얇은 선/글자 경계가 많아 edge/hv 비율이 높음.
-          textHeavy=landscape&&(edgeRate>0.18||hvRate>0.24||(ratio>1.55&&edgeRate>0.13));
+          // 글자·문서·표·스크린샷류: 흰 배경 비율이 높고 경계선/글자선이 많으면 1열로 크게 표시.
+          textHeavy=landscape && (
+            (lightRate>0.42 && edgeRate>0.10) ||
+            (lightRate>0.32 && hvRate>0.17) ||
+            (ratio>1.45 && edgeRate>0.16) ||
+            (grayRate>0.55 && hvRate>0.18)
+          );
         }catch(e){
-          // 분석 실패 시에는 넓은 가로사진을 안전하게 1열 처리
-          textHeavy=landscape&&(w/h>1.35);
+          textHeavy=landscape&&(w/h>1.55);
         }
-        resolve({src:src,landscape:landscape,textHeavy:textHeavy});
+        resolve({src:src,landscape:landscape,textHeavy:textHeavy,w:w,h:h});
       };
-      im.onerror=function(){resolve({src:src,landscape:false,textHeavy:false});};
+      im.onerror=function(){resolve({src:src,landscape:false,textHeavy:false,w:1,h:1});};
       im.src=src;
     });
   }
 
-  const infos=await Promise.all(list.map(analyzePhoto));
-  const gap=opt.gap||'10px';
+  const gap=opt.gap||'8px';
   const gridStyle=opt.gridStyle||'';
-  const imgStyle=opt.imgStyle||'width:100%;height:auto;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)';
+  const generalStyle=opt.generalImgStyle||'width:100%;aspect-ratio:1 / 1;object-fit:cover;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff';
+  const textStyle=opt.textImgStyle||'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18);background:#fff';
+
+  if(opt.textHeavyAuto===false){
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:'+gap+';align-items:start;'+gridStyle+'">'
+      +list.map(function(src){return '<img src="'+src+'" style="'+generalStyle+'">';}).join('')+'</div>';
+  }
+  const infos=await Promise.all(list.map(analyzePhoto));
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:'+gap+';align-items:start;'+gridStyle+'">'
     +infos.map(function(p){
-      var full=(opt.textHeavyAuto!==false&&p.textHeavy)||opt.forceFull===true;
+      var full=(p.textHeavy)||opt.forceFull===true;
       var span=full?'grid-column:1 / -1;':'';
-      return '<img src="'+p.src+'" style="'+span+imgStyle+'">';
+      var st=full?textStyle:generalStyle;
+      return '<img src="'+p.src+'" style="'+span+st+'">';
     }).join('')+'</div>';
 }
 
@@ -3319,7 +3771,7 @@ function openGeneratedReportWindow(reportHtml,imageFileName,htmlFileName){
   +'const reportHtml='+JSON.stringify(reportHtml)+';const imageFileName='+JSON.stringify(imageFileName)+';const htmlFileName='+JSON.stringify(htmlFileName)+';'
   +'const f=document.getElementById("reportFrame");f.contentDocument.open();f.contentDocument.write(reportHtml);f.contentDocument.close();'
   +'function fit(){try{f.style.height=Math.max(600,f.contentDocument.body.scrollHeight)+"px";}catch(e){}}setTimeout(fit,500);setTimeout(fit,1500);function setBusy(on,msg){const el=document.getElementById("busyMsg");const btns=document.querySelectorAll(".bar button");if(el){el.textContent=msg||"처리중입니다…";el.classList.toggle("on",!!on);}btns.forEach(b=>b.disabled=!!on);}function waitFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}'
-  +'async function makeBlob(){fit();const doc=f.contentDocument;const b=doc.body;b.style.background="#ffffff";b.style.filter="none";b.style.opacity="1";Array.from(doc.images||[]).forEach(img=>{img.style.filter="none";img.style.opacity="1";});await waitFrame();const w=Math.max(b.scrollWidth,b.offsetWidth,640);const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:3,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:12000});return await new Promise(r=>c.toBlob(r,"image/png"));}'
+  +'async function makeBlob(){fit();const doc=f.contentDocument;const b=doc.body;b.style.background="#ffffff";b.style.filter="none";b.style.opacity="1";Array.from(doc.images||[]).forEach(img=>{img.style.filter="none";img.style.opacity="1";});await waitFrame();const w=Math.max(b.scrollWidth,b.offsetWidth,640);const h=Math.max(b.scrollHeight,b.offsetHeight,600);const c=await html2canvas(b,{scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",width:w,height:h,windowWidth:w,windowHeight:h,scrollX:0,scrollY:0,x:0,y:0,logging:false,imageTimeout:12000});return await new Promise(r=>c.toBlob(r,"image/png"));}'
   +'async function saveImage(){setBusy(true,"처리중입니다… 이미지를 저장 준비 중입니다.");try{await waitFrame();const blob=await makeBlob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=imageFileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert("원본 PNG 이미지로 저장했습니다. 카톡에서 흐리면 카톡 사진 화질을 원본으로 선택해 전송하세요.");}catch(e){const blob=new Blob([reportHtml],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=htmlFileName;document.body.appendChild(a);a.click();a.remove();alert("이미지 저장이 막혀 HTML 보고서로 저장했습니다.");}finally{setBusy(false);}}'
   +'async function shareImage(){setBusy(true,"처리중입니다… 카톡 공유용 이미지를 생성하고 있습니다.");try{await waitFrame();const blob=await makeBlob();const file=new File([blob],imageFileName,{type:"image/png"});if(navigator.canShare&&navigator.canShare({files:[file]})){setBusy(true,"공유창을 여는 중입니다…");await navigator.share({files:[file],title:"점검보고"});return;}setBusy(false);await saveImage();}catch(e){setBusy(false);await saveImage();}finally{setBusy(false);}}'
   +'document.getElementById("saveBtn").onclick=saveImage;document.getElementById("shareBtn").onclick=shareImage;document.getElementById("printBtn").onclick=()=>window.print();'
@@ -3476,7 +3928,7 @@ window.generateDayReport=async function(dateStr){
     if(btnArea)btnArea.style.display='none';
     try{
       await loadH2C();
-      const canvas=await html2canvas(card,{scale:3,useCORS:true,allowTaint:true,backgroundColor:'#fff'});
+      const canvas=await html2canvas(card,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff'});
       if(btnArea)btnArea.style.display='flex';
       canvas.toBlob(blob=>{
         const url=URL.createObjectURL(blob);
@@ -4133,7 +4585,7 @@ function renderDomainScreen(){
         <div class="field"><label>완료구분</label><select class="sel" id="wNormal"><option value="N" selected>🔄 최종미완료/진행중</option><option value="D">☑️ 당일완료</option><option value="Y">✅ 최종완료</option></select></div>
       </div>
       <div class="field"><label>현장사진<span class="req">*필수</span></label>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:5px">📌 등록 시 공사명·공종·위치·내용·일자 워터마크 자동 삽입</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:5px">📌 등록 시 사진은 원본 그대로 저장됩니다</div>
         <div class="pu-row">
           <label class="pu-label" for="wPhoCam" style="border-color:var(--urgent)"><span class="pi">📷</span>카메라<input type="file" id="wPhoCam" accept="image/*" capture="environment" multiple style="display:none"></label>
           <label class="pu-label" for="wPhoFile" style="border-color:var(--urgent)"><span class="pi">🖼</span>파일선택<input type="file" id="wPhoFile" accept="image/*" multiple style="display:none"></label>
@@ -4209,29 +4661,18 @@ function renderWPrev(){
 window.rmWPho=i=>{wPhotos.splice(i,1);renderWPrev()};
 
 function addWatermark(dataUrl,info){
-  return new Promise(res=>{
-    const img=new Image();
-    img.onload=()=>{
-      const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
-      const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
-      const fs=Math.max(14,Math.floor(img.width*0.034));
-      const lines=[`공사명  ${info.siteName||'-'}`,`공 종   ${info.domain||'-'}`,`위 치   ${info.location||'-'}`,`내 용   ${info.content||'-'}`,`일 자   ${info.date||today()}`];
-      ctx.font=`bold ${fs}px 'Malgun Gothic',sans-serif`;
-      const lh=fs*1.55,px=fs*0.8,py=fs*0.6,bh=lines.length*lh+py*2,bw=img.width*0.58;
-      const x=img.width*0.02,y=img.height-bh-img.height*0.03;
-      ctx.fillStyle='rgba(255,255,255,0.87)';
-      if(ctx.roundRect){ctx.beginPath();ctx.roundRect(x,y,bw,bh,fs*0.3);ctx.fill();}else{ctx.fillRect(x,y,bw,bh);}
-      ctx.fillStyle='#111';lines.forEach((l,i)=>ctx.fillText(l,x+px,y+py+(i+1)*lh-lh*0.15));
-      res(c.toDataURL('image/jpeg',0.92));
-    };
-    img.onerror=()=>res(dataUrl);img.src=dataUrl;
-  });
+  // 워터마크 삭제: 사진은 원본 그대로 사용합니다.
+  return Promise.resolve(dataUrl);
 }
 
 async function saveWork(){
+  showProcessOverlay('처리중입니다… 등록 자료를 저장하고 있습니다.');
+  await waitProcessFrame();
+  try{
   const d=DOMAINS[curDomain];
   const date=document.getElementById('wDate')?.value||today();
-  const writerId=document.getElementById('wWriter')?.value||'';
+  let writerId=document.getElementById('wWriter')?.value||'';
+  if(!writerId)writerId=currentAccessPersonId(state.receivers)||currentAccessPersonId(state.writers);
   const symptom=(document.getElementById('wSymptom')?.value||'').trim();
   const action=(document.getElementById('wAction')?.value||'').trim();
   const priority=document.getElementById('wPri')?.value||'보통';
@@ -4257,6 +4698,8 @@ async function saveWork(){
   await dbPut(STORES.works,{id:editWorkId||uid(),domain:d.id,category,date,endDate,writerId,symptom,action,priority,isNormal:completeType==='Y'?'Y':(completeType==='D'?'D':'N'),completeType,completionType:completeType,completeStatus:completeType,companyId,siteName,location,photos:watermarked,updatedAt:new Date().toISOString()});
   alert(editWorkId?'수정되었습니다.':'등록되었습니다.');
   editWorkId=null;wPhotos=[];workMode='list';await loadState();
+  }catch(e){console.error(e);alert('저장 중 오류가 발생했습니다. 다시 시도해주세요.');}
+  finally{hideProcessOverlay();}
 }
 window.editWork=id=>{
   const w=state.works.find(x=>x.id===id);if(!w)return;
@@ -4328,7 +4771,7 @@ window.shareWorkReport=async function(id){
   var writer=getName(state.writers,w.writerId)||getName(state.receivers,w.writerId)||'-';
   var co=getName(state.companies,w.companyId)||'-';
   var status=getWorkStatusText(w);
-  var photos=await buildOutputPhotoGridHtml(w.photos||[],{gap:'10px',textHeavyAuto:true,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;border:1px solid #333;background:#fff'});
+  var photos=await buildOutputPhotoGridHtml(w.photos||[],{gap:'10px',textHeavyAuto:false,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:8px;display:block;border:1px solid #333;background:#fff'});
   var row=function(k,v){return '<tr><th>'+k+'</th><td>'+v+'</td></tr>';};
   var html='<style>body{margin:0;background:#fff;font-family:Malgun Gothic,Arial,sans-serif;color:#111}.sheet{width:760px;margin:0 auto;padding:18px}.head{border:2px solid #111;padding:12px 14px;margin-bottom:10px}.cap{font-size:13px;font-weight:800;color:#555}.title{font-size:24px;font-weight:900;margin-top:4px}.tbl{width:100%;border-collapse:collapse;font-size:14px}.tbl th,.tbl td{border:1px solid #333;padding:8px 10px;vertical-align:top}.tbl th{width:110px;background:#f3f3f3}.note{border:1px solid #333;padding:10px;margin-top:10px;min-height:40px;white-space:pre-wrap}.photos{margin-top:10px}</style>'
     +'<div class="sheet"><div class="head"><div class="cap">공사현황 보고</div><div class="title">'+esc(w.symptom||'공사현황')+'</div></div><table class="tbl">'
@@ -4365,7 +4808,7 @@ async function saveExt(){
   const start=document.getElementById('extStart').value,end=document.getElementById('extEnd').value;
   const workTitle=document.getElementById('extWorkTitle')?.value.trim()||'';
   const companyId=document.getElementById('extCompany').value,riskLevel=document.getElementById('extRisk').value;
-  const receiverId=document.getElementById('extReceiver').value,note=document.getElementById('extNote').value.trim();
+  let receiverId=document.getElementById('extReceiver').value; if(!receiverId)receiverId=currentAccessPersonId(state.receivers)||currentAccessPersonId(state.writers); const note=document.getElementById('extNote').value.trim();
   const completionType=document.getElementById('extClosed').value, isClosed=completionType==='Y'?'Y':'N', workerCount=document.getElementById('extWorkers').value;
   const supervisorName=document.getElementById('extSuperName').value.trim(),supervisorPhone=document.getElementById('extSuperPhone').value.trim();
   const locationIds=getSelLocIds();
@@ -4430,7 +4873,7 @@ function renderExtList(){
   // 일·월 조회 공사현황 목록은 상단 공사현황 입력(state.externalWorks)과
   // 건축/기계/전기/일반 입력(state.works) 등록분을 함께 조회한다.
   var extRows=state.externalWorks.map(function(w){return Object.assign({__src:'ext'},w);});
-  var workRows=state.works.map(function(w){return {
+  var workRows=state.works.filter(function(w){return !isVocWork(w);}).map(function(w){return {
     __src:'work',id:w.id,domain:w.domain||'gen',start:w.date||'',end:w.endDate||'',workTitle:w.symptom||'공사현황',
     companyId:w.companyId||'',riskLevel:'',workerCount:'',supervisorName:'',supervisorPhone:'',
     locationIds:[],locationText:w.location||'',receiverId:w.writerId||'',note:w.action||'',photos:w.photos||[],
@@ -4450,10 +4893,10 @@ function renderExtList(){
     var todayDone=rows.filter(function(w){return (w.__src==='work'?getWorkCompleteType(w):getExtCompleteType(w))==='D';}).length;
     var open=rows.filter(function(w){return (w.__src==='work'?getWorkCompleteType(w):getExtCompleteType(w))!=='Y';}).length;
     sm.style.display=tot?'block':'none';
-    if(tot)sm.innerHTML='📅 <b>'+fl+'</b> &nbsp;·&nbsp; 총 <b>'+tot+'건</b> &nbsp;|&nbsp; 🔄 최종미완료 <b style="color:var(--warn)">'+open+'</b> &nbsp;|&nbsp; ☑️ 당일완료 <b style="color:var(--warn)">'+todayDone+'</b> &nbsp;|&nbsp; ✅ 최종완료 <b style="color:var(--ok)">'+done+'</b>';
+    if(tot){var nextSummary='📅 <b>'+fl+'</b> &nbsp;·&nbsp; 총 <b>'+tot+'건</b> &nbsp;|&nbsp; 🔄 최종미완료 <b style="color:var(--warn)">'+open+'</b> &nbsp;|&nbsp; ☑️ 당일완료 <b style="color:var(--warn)">'+todayDone+'</b> &nbsp;|&nbsp; ✅ 최종완료 <b style="color:var(--ok)">'+done+'</b>'; if(sm.innerHTML!==nextSummary)sm.innerHTML=nextSummary;}
   }
-  if(!rows.length){box.innerHTML='<div class="empty">📭<br>해당 조건의 데이터가 없습니다</div>';return;}
-  box.innerHTML=rows.map(function(w){
+  if(!rows.length){var emptyHtml='<div class="empty">📭<br>해당 조건의 데이터가 없습니다</div>'; if(box.innerHTML!==emptyHtml)box.innerHTML=emptyHtml; return;}
+  var nextListHtml=rows.map(function(w){
     var coObj=state.companies.find(c=>c.id===w.companyId)||{};
     var co=coObj.name||'-';
     var locs=w.__src==='work'?(w.locationText||'-'):((w.locationIds||[]).map(id=>locLabel(getLoc(id))).filter(Boolean).join(', ')||'-');
@@ -4472,6 +4915,7 @@ function renderExtList(){
     var chief=w.supervisorName||coObj.manager||'-';
     return '<div class="item '+pd.cls+'"><div class="item-title">'+esc(w.workTitle||'공사현황')+' · '+esc(co)+'</div><div class="meta"><span class="chip '+pd.cls+'">'+pd.icon+' '+pd.label+'</span><span class="chip">'+esc(ds||'-')+'</span><span class="chip '+rchip+'">'+esc(w.riskLevel||'')+' 위험</span><span class="chip">📍'+esc(locs)+'</span><span class="chip">작성자:'+esc(rc)+'</span>'+cc+'</div><div class="note-text">인원:'+esc(w.workerCount||'0')+'명 | 현장소장:'+esc(chief)+' | '+phone+'</div>'+(w.note?'<div class="note-text">'+esc(w.note)+'</div>':'')+ph+'<div class="item-actions"><button class="btn sm ghost" onclick="viewExtDetail(\''+w.id+'\')">🔎 세부조회</button><button class="btn sm primary" onclick="shareExtReport(\''+w.id+'\')">📄 PDF/카톡</button><button class="btn sm danger" onclick="deleteExt(\''+w.id+'\')">삭제</button></div></div>';
   }).join('');
+  if(box.innerHTML!==nextListHtml)box.innerHTML=nextListHtml;
 }
 
 window.editExt=id=>{
@@ -4518,7 +4962,7 @@ window.shareExtReport=async function(id){
     const phoneHtml=phone?'<a href="tel:'+esc(String(phone).replace(/[^0-9+]/g,''))+'" style="color:#1d4ed8;text-decoration:none;font-weight:900">'+esc(phone)+'</a>':'-';
     const status=getExtStatusText(w);
     const statusColor=isExtFinalClosed(w)?'#16a34a':'#f59e0b';
-    const photoGrid=await buildOutputPhotoGridHtml(w.photos||[],{gap:'10px',textHeavyAuto:true,imgStyle:'width:100%;height:auto;object-fit:contain;border-radius:10px;display:block;border:1px solid #e5e7eb;background:#fff'});
+    const photoGrid=await buildOutputPhotoGridHtml(w.photos||[],{gap:'6px',textHeavyAuto:true,generalImgStyle:'width:100%;aspect-ratio:1 / 1;object-fit:cover;border-radius:6px;display:block;border:1px solid #e5e7eb;background:#fff',textImgStyle:'width:100%;height:auto;object-fit:contain;border-radius:6px;display:block;border:1px solid #e5e7eb;background:#fff'});
     function row(k,v){return '<tr><th>'+k+'</th><td>'+v+'</td></tr>';}
     const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box}body{margin:0;background:#fff;width:720px;font-family:Apple SD Gothic Neo,Malgun Gothic,sans-serif;color:#111827}.head{background:linear-gradient(160deg,#0f2744,#1a3a6e);color:#fff;padding:24px 28px}.cap{font-size:16px;font-weight:800;opacity:.75;margin-bottom:8px}.title{font-size:30px;font-weight:900;line-height:1.25}.status{display:inline-block;margin-top:12px;padding:7px 14px;border-radius:999px;background:#fff;color:'+statusColor+';font-size:18px;font-weight:900}.body{padding:22px 26px}.tbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:18px}.tbl th{width:118px;background:#f1f5f9;color:#334155;text-align:left;font-size:15px;padding:10px;border:1px solid #cbd5e1}.tbl td{font-size:17px;font-weight:800;padding:10px;border:1px solid #cbd5e1;word-break:break-word}.note{background:#fff7ed;border:1.8px solid #fb923c;border-left:8px solid #f97316;border-radius:12px;padding:12px 14px;font-size:17px;line-height:1.55;white-space:pre-wrap;margin-bottom:18px}.photos-title{font-size:20px;font-weight:900;margin:18px 0 10px;color:#334155}.foot{padding:14px 26px;text-align:center;color:#94a3b8;border-top:1px solid #e5e7eb;font-size:15px}</style></head><body>'
       +'<div class="head"><div class="cap">공사현황 보고</div><div class="title">'+esc(w.workTitle||'공사현황')+'</div></div><div class="body"><table class="tbl">'
@@ -5594,12 +6038,20 @@ function renderMasters(){
   rl('receiverList',state.receivers,STORES.receivers);
 }
 function normText(v){return String(v||'').trim().replace(/\s+/g,' ').toLowerCase();}
+
+function currentAccessPersonId(list){
+  if(!currentAccessUser)return '';
+  const room=accessRoom(currentAccessUser), name=normText(currentAccessUser.name||'');
+  const f=(list||[]).find(x=>normText(x.name)===name && String(x.room||'')===room) || (list||[]).find(x=>normText(x.name)===name);
+  return f?f.id:'';
+}
+
 async function addMaster(store,inputId){
   const el=document.getElementById(inputId);
   const name=el.value.trim();
   if(!name){alert('값을 입력해 주세요.');el.focus();return;}
   const cur=state[store]||[];
-  let item={id:uid(),name,createdAt:new Date().toISOString()};
+  let item={id:uid(),name,room:accessRoom(currentAccessUser),roomName:accessRoomLabel(currentAccessUser),createdAt:new Date().toISOString()};
   if(store===STORES.companies){
     const managerEl=document.getElementById('companyManagerInput');
     const phoneEl=document.getElementById('companyPhoneInput');
@@ -5610,7 +6062,8 @@ async function addMaster(store,inputId){
     const domainEl=document.getElementById('receiverDomainInput');
     const roomEl=document.getElementById('receiverRoomInput');
     item.domain=domainEl?domainEl.value:'gen';
-    item.room=roomEl?roomEl.value:'';
+    item.room=roomEl?(roomEl.value||accessRoom(currentAccessUser)):accessRoom(currentAccessUser);
+    item.roomName=item.room?item.room+'방재':'';
     if(cur.some(x=>normText(x.name)===normText(name)&&String(x.domain||'')===String(item.domain||'')&&String(x.room||'')===String(item.room||''))){
       alert('이미 등록된 접수자입니다.');
       return;
@@ -5670,9 +6123,10 @@ window.removeMaster=async(store,id)=>{
 };
 
 /* ════ BACKUP ════ */
-async function backupData(){const data={exportedAt:new Date().toISOString(),...state};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`facility-backup-${today()}.json`;document.body.appendChild(a);a.click();a.remove()}
+async function backupData(){if(!requireAccessManager('백업'))return;const data={exportedAt:new Date().toISOString(),...state};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`facility-backup-${today()}.json`;document.body.appendChild(a);a.click();a.remove()}
 async function restoreData(file){
   if(!file)return;
+  if(!requireAccessManager('복원'))return;
   let data;
   try{const text=await file.text();data=JSON.parse(text);}
   catch(e){alert('파일 형식이 올바르지 않습니다. 백업 JSON 파일을 선택해주세요.');return;}
@@ -5695,37 +6149,68 @@ async function restoreData(file){
 }
 
 /* ════ RENDER ALL ════ */
-function renderAll(){if(typeof updateNoticeCount==='function')updateNoticeCount();
+function renderAll(){
+  if(typeof updateNoticeCount==='function')updateNoticeCount();
+  renderHomeScreen();
+  updateHeaderStats();
+  renderAccessBadge();
+  if(document.getElementById('accessAdminModal')&&!document.getElementById('accessAdminModal').classList.contains('hidden'))renderAccessAdmin();
+  // 홈 화면에서는 무거운 목록/달력/기준정보 렌더링을 하지 않아 초기 표시를 빠르게 합니다.
+  if(currentMainIndex===0)return;
   fillSel(document.getElementById('extCompany'),state.companies.map(function(c){return Object.assign({},c,{name:c.name+(c.manager?' / '+c.manager:'')+(c.phone?' / '+c.phone:'')});}),'업체 선택');
   fillSel(document.getElementById('extReceiver'),state.receivers,'접수자 선택');
   fillSel(document.getElementById('extFltComp'),state.companies,'업체 전체');
   renderExtLoc(document.getElementById('extLocGroup')?.value||'',getSelLocIds());
-  renderHomeScreen();
-  // 현재 파트 하부메뉴 화면을 보고 있을 때는 renderDomainScreen()으로 덮어쓰지 않음
   const domainStackEl=document.getElementById('domainStack');
   const isPartSubMenu=currentMainIndex===1 && domainStackEl && domainStackEl.querySelector('.part-submenu-panel');
-  if(isPartSubMenu){
-    renderPartSubMenu(curDomain);
-  }else{
-    renderDomainScreen();
-  }
+  if(isPartSubMenu)renderPartSubMenu(curDomain); else renderDomainScreen();
   if(extMode==='list')renderExtList();
-  renderCalendar();
-  renderDayPanel();
-  updateHeaderStats();
-  renderMasters();
+  if(currentMainIndex===3){renderCalendar();renderDayPanel();}
+  if(currentMainIndex===4)renderStats();
+  if(currentMainIndex===5)renderMasters();
   if(currentMainIndex===8 && typeof renderMechForm==='function')renderMechForm();
 }
 
-async function loadState(){
-  state.works=await dbAll(STORES.works);state.externalWorks=await dbAll(STORES.externalWorks);
-  state.companies=await dbAll(STORES.companies);state.locations=await dbAll(STORES.locations);
-  state.receivers=await dbAll(STORES.receivers);state.writers=await dbAll(STORES.writers);
-  state.schedules=await dbAll(STORES.schedules);state.taskLogs=await dbAll(STORES.taskLogs);state.notices=await dbAll(STORES.notices);
-  state.staffMembers=await dbAll(STORES.staffMembers);state.shiftLogs=await dbAll(STORES.shiftLogs);state.mechForms=await dbAll(STORES.mechForms);
+function sortLoadedState(){
   state.locations.sort((a,b)=>(a.group||'').localeCompare(b.group||'')||(a.sub||'').localeCompare(b.sub||''));
   state.mechForms.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   ['companies','receivers','writers','locations'].forEach(k=>state[k].sort((a,b)=>(a.name||'').localeCompare(b.name||'')));
+}
+function renderCoreRefresh(){
+  syncCurrentAccessUser();
+  renderAccessBadge();
+  updateHeaderStats();
+  if(extMode==='list')renderExtList();
+  var sp=document.getElementById('statPopup');
+  if(sp && !sp.classList.contains('hidden') && window.currentStatPopupType){showStatPopup(window.currentStatPopupType);}
+  if(currentMainIndex===3){renderCalendar();renderDayPanel();}
+  if(currentMainIndex===4)renderStats();
+}
+async function loadStateCore(opts){
+  opts=opts||{};
+  const [works,externalWorks,schedules,taskLogs,notices,accessUsers]=await Promise.all([
+    dbAll(STORES.works),dbAll(STORES.externalWorks),dbAll(STORES.schedules),dbAll(STORES.taskLogs),dbAll(STORES.notices),dbAll(STORES.accessUsers)
+  ]);
+  Object.assign(state,{works,externalWorks,schedules,taskLogs,notices,accessUsers});
+  syncCurrentAccessUser();
+  if(opts.silent)return;
+  if(opts.partial){renderCoreRefresh();return;}
+  renderAll();
+}
+async function loadStateMastersOnly(opts){
+  opts=opts||{};
+  const [companies,locations,receivers,writers,staffMembers,shiftLogs,mechForms]=await Promise.all([
+    dbAll(STORES.companies),dbAll(STORES.locations),dbAll(STORES.receivers),dbAll(STORES.writers),dbAll(STORES.staffMembers),dbAll(STORES.shiftLogs),dbAll(STORES.mechForms)
+  ]);
+  Object.assign(state,{companies,locations,receivers,writers,staffMembers,shiftLogs,mechForms});
+  sortLoadedState();
+  if(opts.silent)return;
+  renderAll();
+}
+async function loadState(){
+  await Promise.all([loadStateCore({silent:true}),loadStateMastersOnly({silent:true})]);
+  syncCurrentAccessUser();
+  sortLoadedState();
   renderAll();
 }
 
@@ -5766,6 +6251,9 @@ function bindEvents(){
       closeSidebar();history.pushState({screen:0},'',location.href);return;
     }
     // 모달 닫기
+    if(!document.getElementById('accessAdminModal').classList.contains('hidden')){
+      closeAccessAdmin();history.pushState({screen:0},'',location.href);return;
+    }
     if(!document.getElementById('taskModal').classList.contains('hidden')){
       closeModal('taskModal');history.pushState({screen:0},'',location.href);return;
     }
@@ -6253,6 +6741,9 @@ window.removeStaffMember=async function(id){
   calSelected=today();
   startClock();
   bindEvents();
+  bindAccessAuth();
+  restoreCachedAccessFast();
+  renderAccessBadge();
   resetExtForm();
   // 헤더 높이를 CSS 변수로 설정 → homeScreen top 자동 계산
   function setHeaderH(){
@@ -6278,12 +6769,34 @@ window.removeStaffMember=async function(id){
     return;
   }
 
-  await loadState(); // 데이터 로딩 완료 후 renderAll() 내부에서 화면 렌더링
+  // 접속자 정보만 먼저 읽어 자동접속을 확정합니다.
+  if(accessRestorePending) renderAccessBadge();
+  state.accessUsers=await dbAll(STORES.accessUsers);
+  const autoOk=await tryAutoAccess();
+  if(!autoOk){
+    currentAccessUser=null;
+    accessRestorePending=false;
+    renderAccessBadge();
+    showAccessLock();
+    setTimeout(showAccessLock,300);
+  }
+  // 홈 화면은 핵심자료만 먼저 읽어 즉시 표시합니다.
+  await loadStateCore();
+  if(autoOk){
+    renderAccessBadge();
+    const pendingCount=(state.accessUsers||[]).filter(u=>!u.roleApproved).length;
+    if(isAccessAdmin() && pendingCount>0){
+      showToast('승인대기 접속자 '+pendingCount+'명이 있습니다. 권한관리를 확인하세요.','warn');
+    }
+  }
 
-  // 실시간 동기화 시작 (초기 로드 후에 활성화)
+  // 기준정보/근무/기계양식 등 무거운 자료는 화면 표시 후 백그라운드로 읽습니다.
+  setTimeout(()=>loadStateMastersOnly({silent:true}).then(function(){if(currentMainIndex===5)renderMasters(); if(currentMainIndex===8 && typeof renderMechForm==='function')renderMechForm();}).catch(console.error),80);
+
+  // 실시간 동기화 시작 (핵심 스토어만 감시)
   window._realtimeSyncEnabled = true;
   startRealtimeSync();
-  console.log('[Firebase] 실시간 동기화 시작');
+  console.log('[Firebase] 핵심자료 실시간 동기화 시작');
 })();
 
 </script>
@@ -6448,9 +6961,66 @@ let dutyEditId=null;
 let dutyActiveEditable=null;
 let dutyActiveQuick=null;
 let dutyCurrentColor='#000000';
-function dutyKey(type){return 'facility_duty_docs_'+(type||dutyDocType||'daily');}
+function dutyKey(type){const scope=isAccessAdmin()?'ALL':(isAccessPartManager()?('PART_'+accessPart(currentAccessUser)):(accessRoom(currentAccessUser)||'NO_ROOM'));return 'facility_duty_docs_'+(type||dutyDocType||'daily')+'_'+scope;}
 function dutyDocs(type){try{return JSON.parse(localStorage.getItem(dutyKey(type))||'[]');}catch(e){return [];}}
 function saveDutyDocs(type,arr){localStorage.setItem(dutyKey(type),JSON.stringify(arr||[]));}
+function dutyAccessRoom(){return accessRoom(currentAccessUser)||'';}
+function dutyAccessRoomName(){return accessRoomLabel(currentAccessUser)||'방재실 미지정';}
+function dutyAccessName(){return (currentAccessUser&&currentAccessUser.name)||'';}
+function dutyUserCanEditDoc(rec){
+  if(!rec)return true;
+  if(isAccessAdmin())return true;
+  if(isAccessPartManager()){const part=accessPart(currentAccessUser);return !part || !rec.domain || rec.domain===part || rec.part===part || rec.createdPart===part;}
+  const room=dutyAccessRoom();
+  return !rec.room || String(rec.room)===String(room);
+}
+function dutySameDayRoom(rec,date){
+  if(!rec)return false;
+  if(String(rec.date||'')!==String(date||dutyToday()))return false;
+  if(isAccessAdmin())return true;
+  if(isAccessPartManager()){const part=accessPart(currentAccessUser);return !part || !rec.domain || rec.domain===part || rec.part===part || rec.createdPart===part;}
+  const room=dutyAccessRoom();
+  const recRoom=String(rec.room||rec.createdRoom||room||'');
+  return !room || recRoom===String(room);
+}
+function dutyFindTodayDoc(type){
+  const date=dutyToday();
+  const docs=dutyDocs(type);
+  return docs.find(function(d){return dutySameDayRoom(d,date);})||null;
+}
+function dutyAddDays(dateStr,n){
+  // KST/모바일 Chrome에서 toISOString()을 쓰면 UTC 변환으로 하루가 당겨질 수 있음.
+  // 예: 2026-05-07 + 1일이 2026-05-07로 다시 계산되어 명일계획에 당일 점검항목이 들어가는 문제 방지.
+  const parts=String(dateStr||dutyToday()).match(/(\d{4})\D*(\d{1,2})\D*(\d{1,2})/);
+  const d=parts?new Date(Number(parts[1]),Number(parts[2])-1,Number(parts[3])):new Date();
+  d.setDate(d.getDate()+Number(n||0));
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function dutyTomorrowPlanHtml(domain,baseDate){
+  if(!Array.isArray(state.schedules))return '';
+  const tmr=dutyAddDays(baseDate||dutyToday(),1);
+  const rows=state.schedules.filter(function(s){
+    return s && !s.isReport && s.domain===domain && schedMatchesDate(s,tmr);
+  }).map(function(s){
+    return '· '+(s.name||s.title||'점검사항');
+  });
+  return rows.length?dutyTextToHtml(rows.join('\n')):'';
+}
+function dutyApplyAutoTomorrowPlan(rec){
+  rec=Object.assign({},rec||{});
+  if((rec.type||dutyDocType||'daily')!=='daily')return rec;
+  const base=rec.date||dutyToday();
+  if(!dutyPlain(rec.elecPlan||'').trim())rec.elecPlan=dutyTomorrowPlanHtml('elec',base)||rec.elecPlan||'';
+  if(!dutyPlain(rec.mechPlan||'').trim())rec.mechPlan=dutyTomorrowPlanHtml('mech',base)||rec.mechPlan||'';
+  if(!dutyPlain(rec.archPlan||'').trim()){
+    const etc=[dutyTomorrowPlanHtml('arch',base),dutyTomorrowPlanHtml('gen',base)].filter(Boolean).join('<br>');
+    rec.archPlan=etc||rec.archPlan||'';
+  }
+  return rec;
+}
 function dutyToday(){return (typeof today==='function')?today():new Date().toISOString().slice(0,10);}
 function dutyFmtDate(v){
   v=String(v||dutyToday()).trim();
@@ -6530,14 +7100,21 @@ function dutyInitFloatingColorbar(){
   handle.addEventListener('pointermove',function(e){if(!drag)return;move(e.clientY);e.preventDefault();});
   handle.addEventListener('pointerup',function(e){drag=false;try{handle.releasePointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
 }
-function openDutyDoc(type){dutyDocType=type||'daily';dutyEditId=null;closeSidebar();renderDutyDoc('form');}
+function openDutyDoc(type){
+  dutyDocType=type||'daily';
+  closeSidebar();
+  const todayDoc=dutyFindTodayDoc(dutyDocType);
+  dutyEditId=todayDoc?todayDoc.id:null;
+  renderDutyDoc('form', dutyEditId);
+  if(todayDoc) setTimeout(function(){showToast('오늘 작성된 '+(dutyDocType==='daily'?'업무일지':'인수인계일지')+'를 불러왔습니다');},80);
+}
 function dutyToolbar(){return '';}
 function dutyQuickToolbar(){return dutyColorButtons('duty-quick-colorbar');}
 function dutyInputVal(id){const el=document.getElementById(id);return el?el.value:'';}
 function dutyHtmlVal(id){const el=document.getElementById(id);return el?el.innerHTML:'';}
 function dutyPlain(html){const tmp=document.createElement('div');tmp.innerHTML=html||'';return tmp.textContent||tmp.innerText||'';}
 function dutyDailySheet(rec,editable){
-  rec=rec||{}; const ce=editable?' contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"':''; const ph=dutyDefaultBullets();
+  rec=dutyApplyAutoTomorrowPlan(rec||{}); const ce=editable?' contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"':''; const ph=dutyDefaultBullets();
   const date=esc(dutyFmtDate(rec.date||dutyToday())), worker=esc(rec.worker||''), weather=esc(rec.weather||''), hi=esc(rec.highTemp||''), lo=esc(rec.lowTemp||'');
   const elecToday=dutyCleanHtml(rec.elecToday||ph), elecPlan=dutyCleanHtml(rec.elecPlan||ph), mechToday=dutyCleanHtml(rec.mechToday||ph), mechPlan=dutyCleanHtml(rec.mechPlan||ph), archToday=dutyCleanHtml(rec.archToday||''), archPlan=dutyCleanHtml(rec.archPlan||'');
   const cols='<colgroup>'+
@@ -6639,7 +7216,7 @@ function dutyFitPreview(){
   wrap.style.height=Math.ceil((sheet.offsetHeight||1100)*scale)+18+'px';
 }
 function dutyEasyEditor(rec,type){
-  rec=rec||{}; type=type||dutyDocType||'daily';
+  rec=rec||{}; type=type||dutyDocType||'daily'; if(type==='daily')rec=dutyApplyAutoTomorrowPlan(rec);
   const date=esc(rec.date||dutyToday());
   if(type==='daily'){
     return '<div class="duty-mobile-helper"><div class="duty-mobile-helper-title"><span>📱 모바일 간편입력</span><small>색 선택 후 글 작성</small></div>'+dutyQuickToolbar()
@@ -6671,14 +7248,17 @@ function renderDutyDoc(mode,id){
   const modal=document.getElementById('schedModal'), box=document.getElementById('schedModalBox'); if(!modal||!box)return;
   const type=dutyDocType||'daily', title=type==='daily'?'일일 업무일지':'당직 인수인계일지';
   const docs=dutyDocs(type).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  let rec=id?docs.find(x=>x.id===id):null; dutyEditId=rec?rec.id:null;
+  let rec=id?docs.find(x=>x.id===id):null; if(!rec && mode==='form')rec=dutyFindTodayDoc(type); dutyEditId=rec?rec.id:null;
+  if(rec && !dutyUserCanEditDoc(rec)){showToast('다른 방재실 문서는 수정할 수 없습니다','warn');rec=null;dutyEditId=null;}
   let html='<div class="modal-title">'+(type==='daily'?'📝 ':'🔄 ')+title+'<button class="modal-close" onclick="closeModal(\'schedModal\')">✕</button></div>'
     +'<div class="action-row" style="margin-bottom:8px"><button class="btn '+(mode==='form'?'primary':'ghost')+'" onclick="renderDutyDoc(\'form\')">입력</button><button class="btn '+(mode==='list'?'primary':'ghost')+'" onclick="renderDutyDoc(\'list\')">목록</button></div>';
   if(mode==='list'){
     html+='<div class="action-row" style="margin-bottom:10px"><button class="btn primary" onclick="dutyEditId=null;renderDutyDoc(\'form\')">＋ 새로 작성</button></div>';
-    html+=docs.length?docs.map(function(d){return '<div class="duty-list-card"><div class="duty-list-card-title">'+esc(d.date||'날짜없음')+' · '+esc(d.worker||'근무자 미입력')+'</div><div class="duty-list-card-sub">'+esc(d.summary||'')+'</div><div class="action-row" style="margin-top:8px"><button class="btn sm" onclick="renderDutyDoc(\'form\',\''+d.id+'\')">수정</button><button class="btn sm ghost" onclick="printDutyDoc(\''+d.id+'\')">출력</button><button class="btn sm danger" onclick="deleteDutyDoc(\''+d.id+'\')">삭제</button></div></div>';}).join(''):'<div class="empty">저장된 문서가 없습니다</div>';
+    html+=docs.length?docs.map(function(d){return '<div class="duty-list-card"><div class="duty-list-card-title">'+esc(d.date||'날짜없음')+' · '+esc(d.roomName||dutyAccessRoomName())+' · '+esc(d.worker||d.createdByName||'근무자 미입력')+'</div><div class="duty-list-card-sub">'+esc(d.summary||'')+'</div><div class="action-row" style="margin-top:8px"><button class="btn sm" onclick="renderDutyDoc(\'form\',\''+d.id+'\')">수정</button><button class="btn sm ghost" onclick="printDutyDoc(\''+d.id+'\')">출력</button><button class="btn sm danger" onclick="deleteDutyDoc(\''+d.id+'\')">삭제</button></div></div>';}).join(''):'<div class="empty">저장된 문서가 없습니다</div>';
   }else{
     rec=rec||{};
+    if(type==='daily' && !rec.worker)rec.worker=dutyAccessName();
+    if(type==='handover'){if(!rec.dayShift)rec.dayShift=dutyAccessName();}
     html+=dutyEasyEditor(rec,type)+'<div class="duty-editor-wrap fit-mobile">'+(type==='daily'?dutyDailySheet(rec,true):dutyHandoverSheet(rec,true))+'</div><div class="duty-preview-note">※ 모바일에서는 위 간편입력에 작성한 뒤 양식에 반영하세요. 아래 양식은 출력 위치 확인용 미리보기입니다.</div>'
       +'<div class="action-row" style="margin-top:12px"><button class="btn primary" onclick="dutyApplyQuickToSheet();saveDutyDoc()">저장</button><button class="btn ghost" onclick="dutyApplyQuickToSheet();printDutyDoc(dutyEditId)">출력</button><button class="btn" onclick="dutyEditId=null;renderDutyDoc(\'form\')">초기화</button></div>';
   }
@@ -6686,7 +7266,10 @@ function renderDutyDoc(mode,id){
 }
 function dutyCollectCurrent(){
   const type=dutyDocType||'daily';
-  let rec={id:dutyEditId||('duty_'+Date.now()),type:type,date:dutyUnfmtDate(dutyInputVal('dutyDate')||dutyToday()),worker:dutyInputVal('dutyWorker')||'',updatedAt:new Date().toISOString()};
+  let rec={id:dutyEditId||('duty_'+Date.now()),type:type,date:dutyUnfmtDate(dutyInputVal('dutyDate')||dutyToday()),worker:dutyInputVal('dutyWorker')||dutyAccessName()||'',room:dutyAccessRoom(),roomName:dutyAccessRoomName(),domain:accessPart(currentAccessUser)||'',part:accessPart(currentAccessUser)||'',updatedBy:currentAccessUser&&currentAccessUser.id||'',updatedByName:dutyAccessName(),updatedAt:new Date().toISOString()};
+  const oldRec=dutyEditId?dutyDocs(type).find(function(x){return x.id===dutyEditId;}):null;
+  if(oldRec){rec.createdBy=oldRec.createdBy;rec.createdByName=oldRec.createdByName;rec.createdAt=oldRec.createdAt;rec.room=oldRec.room||rec.room;rec.roomName=oldRec.roomName||rec.roomName;}
+  else{rec.createdBy=currentAccessUser&&currentAccessUser.id||'';rec.createdByName=dutyAccessName();rec.createdAt=rec.updatedAt;}
   if(type==='daily'){
     rec.weather=dutyInputVal('dutyWeather');rec.highTemp=dutyInputVal('dutyHighTemp');rec.lowTemp=dutyInputVal('dutyLowTemp');
     rec.elecToday=dutyHtmlVal('dutyElecToday');rec.elecPlan=dutyHtmlVal('dutyElecPlan');rec.mechToday=dutyHtmlVal('dutyMechToday');rec.mechPlan=dutyHtmlVal('dutyMechPlan');rec.archToday=dutyHtmlVal('dutyArchToday');rec.archPlan=dutyHtmlVal('dutyArchPlan');
@@ -6700,10 +7283,14 @@ function dutyCollectCurrent(){
   return rec;
 }
 function saveDutyDoc(){
-  const type=dutyDocType||'daily'; let docs=dutyDocs(type); const rec=dutyCollectCurrent(); const id=rec.id;
+  const type=dutyDocType||'daily'; let docs=dutyDocs(type); let rec=dutyCollectCurrent();
+  if(!dutyUserCanEditDoc(rec)){showToast('다른 방재실 문서는 저장할 수 없습니다','warn');return;}
+  const same=docs.find(function(d){return d.id!==rec.id && dutySameDayRoom(d,rec.date);});
+  if(same && !dutyEditId){rec.id=same.id;rec.createdBy=same.createdBy;rec.createdByName=same.createdByName;rec.createdAt=same.createdAt;}
+  const id=rec.id;
   const idx=docs.findIndex(x=>x.id===id); if(idx>=0)docs[idx]=rec; else docs.push(rec); saveDutyDocs(type,docs); dutyEditId=id; showToast('✅ 저장되었습니다'); renderDutyDoc('list');
 }
-function deleteDutyDoc(id){if(!confirm('삭제하시겠습니까?'))return; const type=dutyDocType||'daily'; saveDutyDocs(type,dutyDocs(type).filter(x=>x.id!==id)); renderDutyDoc('list');}
+function deleteDutyDoc(id){const type=dutyDocType||'daily'; const rec=dutyDocs(type).find(x=>x.id===id); if(!dutyUserCanEditDoc(rec)){showToast('다른 방재실 문서는 삭제할 수 없습니다','warn');return;} if(!confirm('삭제하시겠습니까?'))return; saveDutyDocs(type,dutyDocs(type).filter(x=>x.id!==id)); renderDutyDoc('list');}
 function dutyPrintCss(type){
   const isDaily=(type||dutyDocType)==='daily';
   const page='A4 portrait';
