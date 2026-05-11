@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg">
-<title>여행기록 - 데이터 복구 수정본</title>
+<title>여행기록 - JSON 백업 복원 수정본</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:linear-gradient(150deg,#fafdff,#eaf5ff 55%,#fff);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Malgun Gothic",Arial,sans-serif;color:#162033}
@@ -39,6 +39,7 @@ button,input,textarea,select{font:inherit}button{border:0;background:none;color:
 </nav>
 </div>
 <div class="toast" id="toast"></div>
+<input id="backupImportFile" type="file" accept="application/json,.json" style="display:none">
 <div class="modal" id="tripModal"><div class="panel"><div class="panelhead"><h2 id="tripModalTitle">여행 추가</h2><button class="close" onclick="closeM('tripModal')">×</button></div>
 <form id="tripForm">
 <input type="hidden" id="tripId"><div class="field"><label>여행 제목</label><input id="tripTitle" required placeholder="예: 제주도 2박3일"></div>
@@ -248,12 +249,14 @@ function map(high=''){
   return `<div class=mapbox><div class=maphead><div><h3>대한민국 여행 지도</h3><p>지역 점을 누르면 목록 필터링</p></div></div><svg viewBox="0 0 100 110" width="100%" height="310"><path class=kpath d="M47 4 C61 7 78 19 81 35 C85 53 78 69 68 82 C58 95 42 99 30 88 C18 78 17 61 24 47 C30 35 27 23 35 13 C38 8 41 5 47 4Z"/><path class=kpath d="M31 96 C35 93 42 94 45 98 C41 104 31 104 27 100 C28 98 29 97 31 96Z"/>${Object.entries(pts).map(([r,[x,y]])=>{let c=stats.find(s=>s.r===r).c,on=high===r||st.filter===r;return `<g onclick="region('${r}')" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="${on?7:c?6:4.8}" fill="${on?'#1d4ed8':c?'#3b82f6':'#fff'}" stroke="#2563eb" stroke-width="1.2"/>${c?`<text x="${x}" y="${y+2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="900">${c}</text>`:''}<text x="${x}" y="${y+13}" text-anchor="middle" font-size="4.8" fill="#334155" font-weight="800">${r}</text></g>`}).join('')}</svg><div class=regions>${stats.map(s=>`<button class="region ${s.c?'has':''}" onclick="region('${s.r}')">${s.r} ${s.c}</button>`).join('')}</div></div>`;
 }
 function setting(){
-  return `<div class=mapbox><div class=maphead><div><h3>데이터 복구/저장 관리</h3><p>기존 DB에서 새 PWA DB로 자동 복사합니다.</p></div><span class=badge>${st.trips.length}건</span></div>
-  <div class=notice>복구 상태: ${esc(st.migration||'확인 전')}<br>기존 DB 이름: travel_diary_real_indexeddb_v2 / travel-record-app-db<br>현재 DB 이름: ${NEW_DB}</div>
+  return `<div class=mapbox><div class=maphead><div><h3>데이터 복구/저장 관리</h3><p>기존 DB 자동복구 + JSON 백업 복원 지원</p></div><span class=badge>${st.trips.length}건</span></div>
+  <div class=notice>복구 상태: ${esc(st.migration||'확인 전')}<br>백업파일명은 travel-record-backup.json 그대로 사용 가능합니다.<br>가져오기는 기존 데이터를 지우지 않고 병합 저장합니다.</div>
   <div class=stats><div class=stat><b>${st.trips.length}</b><span>여행</span></div><div class=stat><b>${st.trips.reduce((a,t)=>a+(t.entries?.length||0),0)}</b><span>기록</span></div><div class=stat><b>${Math.round(JSON.stringify(st.trips).length/1024)}</b><span>KB</span></div></div>
-  <div class=acts><button class=secondary onclick="manualRecover()">이전 데이터 다시 복구</button><button class=secondary onclick="exportData()">백업</button></div>
-  <div class=acts><button class=danger onclick="resetOnlyNew()">현재 DB만 초기화</button></div></div>`;
+  <div class=acts><button class=secondary onclick="manualRecover()">이전 DB 다시 복구</button><button class=secondary onclick="document.getElementById('backupImportFile').click()">JSON 백업 복원</button></div>
+  <div class=acts><button class=secondary onclick="exportData()">JSON 백업 저장</button><button class=danger onclick="resetOnlyNew()">현재 DB만 초기화</button></div>
+  <div class=empty style="margin-top:12px;text-align:left">복원 순서:<br>1. JSON 백업 복원 클릭<br>2. travel-record-backup.json 선택<br>3. 복원 완료 후 목록 자동 새로고침</div></div>`;
 }
+
 function render(){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.v===st.v));
   document.getElementById('headTitle').textContent=st.v==='detail'?'여행 상세':st.v==='map'?'국내 지도':st.v==='setting'?'데이터 관리':'여행기록';
@@ -279,6 +282,75 @@ tripForm.onsubmit=async e=>{e.preventDefault();let old=st.trips.find(t=>t.id===t
 entryForm.onsubmit=async e=>{e.preventDefault();let t=sel();if(!t)return;let en={id:uid(),day:+entryDay.value||1,time:entryTime.value||new Date().toTimeString().slice(0,5),type:entryType.value,title:entryTitle.value,body:entryBody.value,photos:JSON.parse(entryPreview.dataset.src||'[]')};await put({...t,entries:[...(t.entries||[]),en],updatedAt:new Date().toISOString()});st.day=en.day;st.tab='일정';closeM('entryModal');entryForm.reset();entryPreview.textContent='사진 선택';delete entryPreview.dataset.src;toast('기록 저장 완료');await reload(false);st.v='detail';render()};
 function exportData(){let b=new Blob([JSON.stringify(st.trips,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='travel-record-backup.json';a.click();URL.revokeObjectURL(a.href);toast('백업 생성 완료')}
 async function resetOnlyNew(){if(confirm('현재 PWA DB만 초기화합니다. 이전 DB는 건드리지 않습니다. 계속할까요?')){await clearNew();await boot();toast('현재 DB 초기화 후 이전 DB 재확인 완료')}}
+
+function readJsonFile(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      try{res(JSON.parse(r.result))}
+      catch(e){rej(e)}
+    };
+    r.onerror=()=>rej(r.error);
+    r.readAsText(file,'utf-8');
+  });
+}
+function extractTripsFromBackup(data){
+  if(Array.isArray(data)) return data;
+  if(data && Array.isArray(data.trips)) return data.trips;
+  if(data && Array.isArray(data.data)) return data.data;
+  if(data && Array.isArray(data.records)) return data.records;
+  if(data && typeof data==='object'){
+    const vals=Object.values(data);
+    const arr=vals.find(v=>Array.isArray(v) && v.some(x=>x && typeof x==='object' && (x.title||x.name||x.tripTitle||x.entries||x.records)));
+    if(arr) return arr;
+  }
+  return [];
+}
+async function importBackupFile(file){
+  try{
+    const data=await readJsonFile(file);
+    const rows=extractTripsFromBackup(data);
+    if(!rows.length){
+      toast('복원할 여행 데이터가 없습니다.');
+      return;
+    }
+    const before=await all();
+    const existing=new Map(before.map(t=>[String(t.id),t]));
+    let imported=0, updated=0;
+    for(const raw of rows){
+      const t=normalizeTrip(raw);
+      if(existing.has(String(t.id))){
+        const old=existing.get(String(t.id));
+        const oldTime=old.updatedAt||old.createdAt||'';
+        const newTime=t.updatedAt||t.createdAt||'';
+        if(newTime >= oldTime){
+          await put({...old,...t,id:old.id,updatedAt:new Date().toISOString()});
+          updated++;
+        }
+      }else{
+        await put({...t,id:t.id||uid(),updatedAt:t.updatedAt||new Date().toISOString()});
+        imported++;
+      }
+    }
+    st.migration=`JSON 백업 복원 완료: 신규 ${imported}건, 갱신 ${updated}건`;
+    await reload(false);
+    document.getElementById('dbBadge').className='badge';
+    document.getElementById('dbBadge').textContent='복원됨';
+    toast(st.migration);
+    st.v='list';
+    render();
+  }catch(e){
+    toast('JSON 복원 실패: 파일 형식 확인 필요');
+  }finally{
+    const input=document.getElementById('backupImportFile');
+    if(input) input.value='';
+  }
+}
+document.getElementById('backupImportFile').addEventListener('change', e=>{
+  const file=e.target.files && e.target.files[0];
+  if(file) importBackupFile(file);
+});
+
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}))}
 boot();
 </script>
