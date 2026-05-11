@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-record-pwa-migration-fix-v3';
+const CACHE_NAME = 'travel-record-pwa-import-fix-v4';
 const ASSETS = ['./','./index.html','./manifest.json','./icon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
