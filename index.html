@@ -153,6 +153,25 @@ svg text{font-family:var(--sans)}
 .preview{height:140px;border-radius:18px;background:var(--surface3);border:1px dashed var(--border2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:13px;font-weight:500}
 .preview img{width:100%;height:100%;object-fit:cover}
 
+/* ── STATUS / RATING / PHOTO STRIP ── */
+.statusbar{position:fixed;left:50%;top:72px;transform:translateX(-50%);width:min(390px,calc(100% - 32px));z-index:70;margin:0;padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;font-weight:700;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);display:none}
+.statusbar.show{display:block}
+.entry-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.entry-acts{display:flex;gap:5px;flex-shrink:0}
+.entry-acts .mini{padding:5px 8px;font-size:10px}
+.stars{color:#d4a017;font-size:13px;letter-spacing:1px;margin:2px 0 6px;font-weight:700}
+.rating-select{display:flex;gap:7px;flex-wrap:wrap}
+.rating-select button{width:36px;height:34px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);font-size:15px;color:#d4a017;font-weight:800}
+.rating-select button.on{background:#fffbeb;border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.18) inset}
+.photoStrip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 2px}
+.photoStrip::-webkit-scrollbar{display:none}
+.photoChip{position:relative;flex:0 0 94px;height:74px;border-radius:14px;overflow:hidden;background:var(--surface3);border:1px solid var(--border)}
+.photoChip img{width:100%;height:100%;object-fit:cover}
+.photoChip button{position:absolute;right:5px;top:5px;width:24px;height:24px;border-radius:50%;background:rgba(10,10,15,.76);color:white;font-size:15px;line-height:1}
+.tour-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tour-item{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px 13px;font-size:13px;line-height:1.55;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.tour-item b{display:block;font-family:var(--serif);font-size:15px;margin-bottom:3px;color:var(--ink)}
+
 /* ── TOAST ── */
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);width:min(360px,calc(100% - 32px));background:var(--ink);color:rgba(255,255,255,.92);border-radius:16px;padding:13px 16px;box-shadow:0 20px 48px rgba(10,10,15,.3);z-index:100;opacity:0;transition:.24s;font-size:13px;font-weight:500;text-align:center;letter-spacing:.2px}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -179,6 +198,7 @@ svg text{font-family:var(--sans)}
 </header>
 
 <main class="page" id="page"></main>
+<div class="statusbar" id="statusbar"></div>
 
 <nav class="bottom">
   <button class="nav" data-v="cover"><span class="nav-ico">⌂</span>홈</button>
@@ -221,10 +241,11 @@ svg text{font-family:var(--sans)}
 <div class="modal" id="entryModal">
   <div class="panel">
     <div class="panelhead">
-      <h2>기록 추가</h2>
+      <h2 id="entryModalTitle">기록 추가</h2>
       <button class="close" onclick="closeM('entryModal')">×</button>
     </div>
     <form id="entryForm">
+      <input type="hidden" id="entryId">
       <div class="row2">
         <div class="field"><label>일차</label><input id="entryDay" type="number" min="1" value="1"></div>
         <div class="field"><label>시간</label><input id="entryTime" type="time"></div>
@@ -239,8 +260,9 @@ svg text{font-family:var(--sans)}
       </div>
       <div class="field"><label>제목</label><input id="entryTitle" required placeholder="예: 협재 해수욕장"></div>
       <div class="field"><label>내용</label><textarea id="entryBody" placeholder="이 순간을 기록으로 남겨보세요"></textarea></div>
+      <div class="field"><label>별점</label><div class="rating-select" id="entryRatingBtns"></div><input id="entryRating" type="hidden" value="0"></div>
       <div class="field"><label>사진</label><input id="entryPhotos" type="file" accept="image/*" multiple><div class="preview" id="entryPreview">사진을 선택하세요</div></div>
-      <button class="primary">기록 저장</button>
+      <button class="primary" id="entrySaveBtn">기록 저장</button>
     </form>
   </div>
 </div>
@@ -249,7 +271,28 @@ svg text{font-family:var(--sans)}
 const NEW_DB='travel_record_pwa_db_v1';
 const STORE='trips';
 const regs=["서울","경기","강원","충북","충남","전북","전남","경북","경남","부산","제주","인천","대전","대구","광주","울산","세종","해외"];
-const cover="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 620'><defs><linearGradient id='sky' x1='0' y1='0' x2='1' y2='1'><stop stop-color='#1c1c2e'/><stop offset='.5' stop-color='#2d2d50'/><stop offset='1' stop-color='#0a0a1a'/></linearGradient><linearGradient id='dark' x1='0' y1='0' x2='0' y2='1'><stop stop-color='#1c1c2e' stop-opacity='.0'/><stop offset='1' stop-color='#0a0a0f' stop-opacity='.85'/></linearGradient></defs><rect width='900' height='620' fill='url(#sky)'/><circle cx='700' cy='110' r='64' fill='#d4a017' opacity='.22'/><circle cx='700' cy='110' r='44' fill='#f0c040' opacity='.55'/><path d='M0 400 C180 330 340 430 500 360 C640 295 760 360 900 310 L900 620 L0 620Z' fill='#0f0f20' opacity='.6'/><path d='M0 470 C170 405 320 505 490 440 C660 370 770 450 900 408 L900 620 L0 620Z' fill='#060610' opacity='.7'/><rect width='900' height='620' fill='url(#dark)'/><text x='60' y='88' font-family='Georgia,serif' font-size='28' font-weight='700' fill='white' opacity='.7' letter-spacing='3'>TRAVEL DIARY</text><text x='60' y='480' font-family='Georgia,serif' font-size='52' font-weight='700' fill='white' opacity='.92' letter-spacing='-1'>나만의 기록</text><text x='60' y='536' font-family='Arial,sans-serif' font-size='18' fill='white' opacity='.55' letter-spacing='2'>YOUR JOURNEY, YOUR STORY</text></svg>`);
+const cover="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 620'><defs><linearGradient id='sky' x1='0' y1='0' x2='1' y2='1'><stop stop-color='#1c1c2e'/><stop offset='.5' stop-color='#2d2d50'/><stop offset='1' stop-color='#0a0a1a'/></linearGradient><linearGradient id='dark' x1='0' y1='0' x2='0' y2='1'><stop stop-color='#1c1c2e' stop-opacity='.0'/><stop offset='1' stop-color='#0a0a0f' stop-opacity='.85'/></linearGradient></defs><rect width='900' height='620' fill='url(#sky)'/><circle cx='700' cy='110' r='64' fill='#d4a017' opacity='.22'/><circle cx='700' cy='110' r='44' fill='#f0c040' opacity='.55'/><path d='M0 400 C180 330 340 430 500 360 C640 295 760 360 900 310 L900 620 L0 620Z' fill='#0f0f20' opacity='.6'/><path d='M0 470 C170 405 320 505 490 440 C660 370 770 450 900 408 L900 620 L0 620Z' fill='#060610' opacity='.7'/><rect width='900' height='620' fill='url(#dark)'/><text x='60' y='88' font-family='Georgia,serif' font-size='28' font-weight='700' fill='white' opacity='.7' letter-spacing='3'>TRAVEL DIARY</text><text x='60' y='480' font-family='Georgia,serif' font-size='52' font-weight='700' fill='white' opacity='.92' letter-spacing='-1'>나만의 기록</text><text x='60' y='536' font-family='Arial,sans-serif' font-size='18' fill='white' opacity='.55' letter-spacing='2'>YOUR JOURNEY, YOUR STORY</text></svg>`)
+const touristSpots={
+  서울:[['경복궁','조선 궁궐과 북촌·인사동을 함께 보기 좋은 대표 코스'],['남산서울타워','야경과 도심 전망을 한 번에 볼 수 있는 전망 명소'],['한강공원','산책, 자전거, 피크닉 기록을 남기기 좋은 장소']],
+  경기:[['수원화성','성곽길 산책과 야간 조명이 좋은 세계유산 코스'],['가평 남이섬','숲길과 강변 사진을 남기기 좋은 당일 코스'],['파주 임진각','역사·전망·평화누리공원을 함께 둘러볼 수 있는 곳']],
+  강원:[['강릉 경포대','호수와 해변을 함께 볼 수 있는 동해안 대표 명소'],['속초 설악산','케이블카와 산책 코스가 잘 알려진 산악 명소'],['정동진','일출과 바다 풍경 기록에 좋은 코스']],
+  충북:[['단양 도담삼봉','남한강 풍경과 사진 포인트가 좋은 명소'],['청풍호반','호수 전망과 드라이브 코스가 좋은 지역'],['속리산 법주사','산사와 숲길을 함께 볼 수 있는 코스']],
+  충남:[['공주 공산성','백제 역사 산책 코스로 유명한 성곽'],['부여 궁남지','연못과 야경 산책이 좋은 백제권 명소'],['태안 꽃지해수욕장','낙조와 바다 사진을 남기기 좋은 해변']],
+  전북:[['전주 한옥마을','한옥 거리와 먹거리 기록이 좋은 대표 여행지'],['군산 근대거리','근대 건축과 골목 여행에 적합한 코스'],['내장산','단풍과 산책 코스로 유명한 산악 명소']],
+  전남:[['순천만습지','갈대밭과 일몰 풍경이 좋은 생태 명소'],['여수 오동도','바다 산책과 야경 코스로 유명한 곳'],['담양 죽녹원','대나무 숲길 기록에 좋은 장소']],
+  경북:[['경주 불국사','역사 여행의 대표 코스'],['안동 하회마을','전통마을과 강변 풍경을 함께 볼 수 있는 곳'],['포항 호미곶','일출과 바다 전망이 유명한 명소']],
+  경남:[['통영 동피랑','벽화마을과 항구 전망을 함께 볼 수 있는 곳'],['거제 바람의언덕','해안 풍경과 사진 포인트가 좋은 명소'],['진주성','성곽과 남강 야경이 좋은 역사 명소']],
+  부산:[['해운대','부산 대표 해변과 야경 코스'],['감천문화마을','골목과 전망 사진을 남기기 좋은 곳'],['태종대','해안 절경과 산책 코스가 좋은 명소']],
+  제주:[['성산일출봉','일출과 해안 전망으로 유명한 제주 대표 명소'],['천지연·정방폭포','서귀포 폭포 코스로 묶기 좋은 관광지'],['에코랜드','숲길과 기차 테마를 즐길 수 있는 관광지']],
+  인천:[['월미도','바다 산책과 놀이시설이 있는 대표 코스'],['송도 센트럴파크','도심 공원과 야경 기록이 좋은 장소'],['강화도 전등사','역사와 산책을 함께 할 수 있는 명소']],
+  대전:[['한밭수목원','도심 산책과 사진 기록이 좋은 곳'],['계족산 황톳길','걷기 여행에 적합한 숲길'],['대청호 오백리길','호수 전망과 드라이브 코스가 좋은 명소']],
+  대구:[['김광석거리','골목 산책과 사진 기록이 좋은 테마 거리'],['수성못','야경과 산책 코스로 유명한 곳'],['팔공산','도심 근교 산악 여행 코스']],
+  광주:[['무등산','광주 대표 산악 명소'],['양림동 역사문화마을','골목과 근대문화 기록에 좋은 곳'],['국립아시아문화전당','전시와 도심 산책을 함께 즐길 수 있는 곳']],
+  울산:[['간절곶','일출 명소로 유명한 해안 코스'],['대왕암공원','바다 절경과 산책로가 좋은 명소'],['태화강 국가정원','정원 산책과 사진 기록에 좋은 곳']],
+  세종:[['세종호수공원','호수 산책과 야경 기록이 좋은 곳'],['국립세종수목원','실내외 정원을 함께 볼 수 있는 명소'],['금강보행교','강변 전망과 산책 코스가 좋은 장소']],
+  해외:[['여행지 직접 등록','해외 지역은 도시명과 명소를 세부일정에 직접 기록하세요']]
+};
+;
 
 let st={v:'cover',trips:[],sel:null,filter:'전체',q:'',tab:'일정',day:1};
 
@@ -309,6 +352,14 @@ function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/
 function days(a,b){if(!a||!b)return 1;const d=Math.round((new Date(b)-new Date(a))/(864e5));return Math.max(d+1,1)}
 function sel(){return st.trips.find(t=>t.id===st.sel)||null}
 function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
+function statusMsg(m,hold=1400){const el=document.getElementById('statusbar');if(!el)return;el.textContent=m;el.classList.add('show');if(hold){clearTimeout(statusMsg.t);statusMsg.t=setTimeout(()=>el.classList.remove('show'),hold)}}
+function nowTime(){return new Date().toTimeString().slice(0,5)}
+function starText(n){n=Number(n||0);return n?('★'.repeat(n)+'☆'.repeat(5-n)):'별점 없음'}
+function setRating(n){entryRating.value=String(n);document.querySelectorAll('#entryRatingBtns button').forEach(b=>b.classList.toggle('on',Number(b.dataset.r)===Number(n)))}
+function drawRatingBtns(n=0){entryRatingBtns.innerHTML=[1,2,3,4,5].map(i=>`<button type="button" data-r="${i}" onclick="setRating(${i})">★${i}</button>`).join('');setRating(n)}
+function setEntryPhotos(ds){entryPreview.dataset.src=JSON.stringify(ds||[]);entryPreview.className='photoStrip';entryPreview.innerHTML=(ds&&ds.length)?ds.map((d,i)=>`<div class="photoChip"><img src="${d}"><button type="button" onclick="removeEntryPhoto(${i})">×</button></div>`).join(''):'사진을 선택하세요'}
+function removeEntryPhoto(i){const ds=JSON.parse(entryPreview.dataset.src||'[]');ds.splice(i,1);setEntryPhotos(ds);statusMsg('선택한 사진을 취소했습니다')}
+function resetEntryForm(){entryForm.reset();entryId.value='';entryModalTitle.textContent='기록 추가';entrySaveBtn.textContent='기록 저장';entryDay.value=st.day||1;entryTime.value=nowTime();drawRatingBtns(0);setEntryPhotos([])}
 async function reload(resetSel=true){
   if(resetSel)st.sel=null;
   try{
@@ -409,8 +460,8 @@ function detail(){
       <img src="${t.cover||cover}">
       <button class="back" onclick="st.v='home';render()">‹</button>
       <div class="ct">
-        <h1>${esc(t.title)}</h1>
-        <div class="hero-sub" style="display:inline-flex">${esc(t.country)} · ${esc(t.region)} · ${days(t.startDate,t.endDate)}일</div>
+        <h1>${esc(t.title)} · ${st.day}일차</h1>
+        <div class="hero-sub" style="display:inline-flex">현재 ${nowTime()} · ${esc(t.country)} · ${esc(t.region)} · ${days(t.startDate,t.endDate)}일</div>
       </div>
     </div>
     <div class="sheet">
@@ -432,7 +483,13 @@ function timeline(t){
       <div class="entry">
         <div class="time">${esc(e.time)}</div>
         <div class="ebox">
-          <h3>${e.type==='food'?'🍽':e.type==='photo'?'📷':e.type==='memo'?'📝':'📍'} ${esc(e.title)}</h3>
+          <div class="entry-top">
+            <div>
+              <h3>${e.type==='food'?'🍽':e.type==='photo'?'📷':e.type==='memo'?'📝':'📍'} ${esc(e.title)}</h3>
+              <div class="stars">${starText(e.rating)}</div>
+            </div>
+            <div class="entry-acts"><button class="mini" onclick="editEntry('${e.id}')">수정</button><button class="mini bad" onclick="deleteEntry('${e.id}')">삭제</button></div>
+          </div>
           <p>${esc(e.body)}</p>
           ${e.photos?.length?`<div class="photos">${e.photos.map(p=>`<img src="${p}">`).join('')}</div>`:''}
         </div>
@@ -457,6 +514,7 @@ function info(t){
         <div class="stat"><b>${t.entries?.length||0}</b><span>기록</span></div>
       </div>
       <div class="acts" style="flex-direction:column;gap:8px">
+        <button class="secondary" onclick="showRatingSearch('${t.id}')">별점 조회</button>
         <button class="secondary" onclick="editTrip('${t.id}')">여행 정보 수정</button>
         <button class="danger" onclick="deleteTrip('${t.id}')">이 여행 삭제</button>
       </div>
@@ -485,7 +543,22 @@ function map(high=''){
         }).join('')}
       </svg>
       <div class="regions">${stats.map(s=>`<button class="region ${s.c?'has':''}" onclick="region('${s.r}')">${s.r} ${s.c||''}</button>`).join('')}</div>
+      ${touristBox(high)}
     </div>`;
+}
+
+function touristBox(r){
+  const key=r&&touristSpots[r]?r:(st.filter&&touristSpots[st.filter]?st.filter:'제주');
+  const rows=touristSpots[key]||[];
+  return `<div class="sec-label">${esc(key)} 유명 관광지</div><div class="tour-list">${rows.map(a=>`<div class="tour-item"><b>${esc(a[0])}</b>${esc(a[1])}</div>`).join('')}</div>`;
+}
+function showRatingSearch(id){
+  const t=st.trips.find(a=>a.id===id)||sel();if(!t)return;
+  const min=Number(prompt('조회할 최소 별점을 입력하세요. 예: 4', '4')||0);
+  const rows=(t.entries||[]).filter(e=>Number(e.rating||0)>=min).sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
+  if(!rows.length){toast(`${min}점 이상 기록이 없습니다`);return}
+  MARKER
+  statusMsg(`별점 ${min}점 이상 ${rows.length}건 조회 완료`);
 }
 
 function setting(){
@@ -516,7 +589,7 @@ function render(){
   document.getElementById('page').innerHTML=h;
 }
 
-function openDetail(x){st.sel=x;st.v='detail';st.tab='일정';st.day=1;render()}
+function openDetail(x){statusMsg('일정을 불러오는 중입니다...',900);st.sel=x;st.v='detail';st.tab='일정';st.day=1;render();statusMsg('일정 선택 완료',1200)}
 function region(r){st.filter=r;st.v='home';render();toast(r+' 지역으로 필터링됨')}
 function openM(x){document.getElementById(x).classList.add('show')}
 function closeM(x){document.getElementById(x).classList.remove('show')}
@@ -562,7 +635,7 @@ function normalizeTrip(raw){
   const now=new Date().toISOString();
   const country=raw.country||(raw.region==='해외'?'해외':'국내');
   const region=raw.region||(country==='해외'?'해외':'서울');
-  return {id:raw.id||uid(),title:raw.title||raw.name||raw.tripTitle||'복원 여행',country,region,startDate:raw.startDate||raw.start||new Date().toISOString().slice(0,10),endDate:raw.endDate||raw.end||raw.startDate||new Date().toISOString().slice(0,10),note:raw.note||raw.memo||raw.description||'',cover:raw.cover||raw.photo||raw.image||cover,bookmarked:!!raw.bookmarked,entries:(raw.entries||raw.records||[]).map(e=>({id:e.id||uid(),day:Number(e.day||1),time:e.time||'',type:e.type||'memo',title:e.title||e.name||'기록',body:e.body||e.note||e.memo||e.content||'',photos:e.photos||e.images||[]})),createdAt:raw.createdAt||now,updatedAt:raw.updatedAt||now};
+  return {id:raw.id||uid(),title:raw.title||raw.name||raw.tripTitle||'복원 여행',country,region,startDate:raw.startDate||raw.start||new Date().toISOString().slice(0,10),endDate:raw.endDate||raw.end||raw.startDate||new Date().toISOString().slice(0,10),note:raw.note||raw.memo||raw.description||'',cover:raw.cover||raw.photo||raw.image||cover,bookmarked:!!raw.bookmarked,entries:(raw.entries||raw.records||[]).map(e=>({id:e.id||uid(),day:Number(e.day||1),time:e.time||'',type:e.type||'memo',title:e.title||e.name||'기록',body:e.body||e.note||e.memo||e.content||'',rating:Number(e.rating||0),photos:e.photos||e.images||[]})),createdAt:raw.createdAt||now,updatedAt:raw.updatedAt||now};
 }
 function extractTrips(data){if(Array.isArray(data))return data;if(data?.trips)return data.trips;if(data?.data)return data.data;if(data?.records)return data.records;return []}
 function readJsonFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{try{res(JSON.parse(r.result))}catch(e){rej(e)}};r.onerror=()=>rej(r.error);r.readAsText(file,'utf-8')})}
@@ -596,10 +669,10 @@ async function resetOnlyNew(){
 }
 
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{st.v=b.dataset.v;render()});
-document.getElementById('plus').onclick=()=>st.v==='detail'?openM('entryModal'):newTrip();
+document.getElementById('plus').onclick=()=>{if(st.v==='detail'){resetEntryForm();statusMsg(`${st.day}일차 세부일정을 입력합니다`,1200);openM('entryModal')}else newTrip()};
 tripCountry.onchange=e=>fillRegion(e.target.value,e.target.value==='국내'?'서울':'해외');
 tripPhoto.onchange=async e=>{const f=e.target.files[0];if(f){const d=await f2d(f);tripPreview.innerHTML=`<img src="${d}">`;tripPreview.dataset.src=d}};
-entryPhotos.onchange=async e=>{const ds=await Promise.all([...e.target.files].map(f2d));entryPreview.innerHTML=ds.slice(0,3).map(d=>`<img src="${d}" style="width:33.3%;height:100%;object-fit:cover">`).join('');entryPreview.dataset.src=JSON.stringify(ds)};
+entryPhotos.onchange=async e=>{const cur=JSON.parse(entryPreview.dataset.src||'[]');const ds=await Promise.all([...e.target.files].map(f2d));setEntryPhotos([...cur,...ds]);statusMsg(`${ds.length}장의 사진이 선택되었습니다`,1200)};
 tripForm.onsubmit=async e=>{
   e.preventDefault();
   const old=st.trips.find(t=>t.id===tripId.value);
@@ -609,16 +682,34 @@ tripForm.onsubmit=async e=>{
 entryForm.onsubmit=async e=>{
   e.preventDefault();
   const t=sel();if(!t){toast('여행을 먼저 선택하세요');return}
-  const en={id:uid(),day:+entryDay.value||1,time:entryTime.value||new Date().toTimeString().slice(0,5),type:entryType.value,title:entryTitle.value,body:entryBody.value,photos:JSON.parse(entryPreview.dataset.src||'[]')};
-  await put({...t,entries:[...(t.entries||[]),en]});
+  statusMsg('세부일정을 저장하는 중입니다...',0);
+  const en={id:entryId.value||uid(),day:+entryDay.value||1,time:entryTime.value||nowTime(),type:entryType.value,title:entryTitle.value,body:entryBody.value,rating:+entryRating.value||0,photos:JSON.parse(entryPreview.dataset.src||'[]')};
+  const entries=[...(t.entries||[])];
+  const ix=entries.findIndex(a=>a.id===en.id);
+  if(ix>=0)entries[ix]=en;else entries.push(en);
+  await put({...t,entries});
   st.day=en.day;st.tab='일정';closeM('entryModal');
-  entryForm.reset();entryPreview.textContent='사진을 선택하세요';
-  delete entryPreview.dataset.src;
-  await reload(false);st.v='detail';render();toast('기록이 저장되었습니다');
+  resetEntryForm();
+  await reload(false);st.v='detail';render();toast(ix>=0?'세부일정이 수정되었습니다':'세부일정이 추가되었습니다');statusMsg('세부일정 저장 완료',1200);
 };
+function editEntry(id){
+  const t=sel();const e=(t?.entries||[]).find(a=>a.id===id);if(!e)return;
+  entryId.value=e.id;entryDay.value=e.day||st.day;entryTime.value=e.time||nowTime();entryType.value=e.type||'memo';entryTitle.value=e.title||'';entryBody.value=e.body||'';
+  entryModalTitle.textContent='기록 수정';entrySaveBtn.textContent='수정 저장';drawRatingBtns(e.rating||0);setEntryPhotos(e.photos||[]);
+  statusMsg('세부일정 수정 화면을 열었습니다',1200);openM('entryModal');
+}
+async function deleteEntry(id){
+  const t=sel();if(!t)return;
+  if(!confirm('이 세부일정을 삭제할까요?'))return;
+  statusMsg('세부일정을 삭제하는 중입니다...',0);
+  await put({...t,entries:(t.entries||[]).filter(e=>e.id!==id)});
+  await reload(false);st.v='detail';render();toast('세부일정이 삭제되었습니다');statusMsg('세부일정 삭제 완료',1200);
+}
 backupImportFile.onchange=e=>{const f=e.target.files?.[0];if(f)importBackupFile(f);e.target.value=''};
+drawRatingBtns(0);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}))}
 boot();
 </script>
 </body>
-</html>
+</html>  alert(rows.map(e=>`${e.day}일차 ${e.time||''} · ${starText(e.rating)}\n${e.title}`).join('\n\n'));
+
