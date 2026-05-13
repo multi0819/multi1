@@ -1,8 +1,8 @@
 {
   "name": "여행기록",
   "short_name": "여행기록",
-  "description": "고급형 디자인 v10 - 여행기간 요약 표시",
-  "start_url": "./index.html",
+  "description": "여행기록 지도/별점 조회 갱신판",
+  "start_url": "./index.html?v=20260514-001-cache-reset",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
