@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-record-premium-v11-20260512';
+const CACHE_NAME = 'travel-record-premium-v14-cityhall-derived-20260513';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', event => {
