@@ -6,12 +6,13 @@
 <meta name="theme-color" content="#0a0a0f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./manifest.json?v=20260514-001-cache-reset">
 <link rel="icon" href="./icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <title>여행기록</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{
   --ink:#0a0a0f;--ink2:#1c1c2e;--ink3:#2d2d44;
@@ -118,10 +119,15 @@ input,textarea,select{border:0;outline:0;background:transparent;width:100%}
 
 /* ── MAP ── */
 .mapbox{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:18px;box-shadow:0 2px 16px rgba(0,0,0,.07)}
+#realMap{width:100%;height:390px;border-radius:20px;border:1px solid var(--border);overflow:hidden;background:var(--surface3);z-index:1}
+.mapFallback{height:390px;border-radius:20px;border:1px dashed var(--border2);display:grid;place-items:center;text-align:center;color:var(--muted);line-height:1.7;padding:20px;background:var(--surface3)}
+.mapPopup{min-width:190px}.mapPopup b{font-family:var(--serif);font-size:15px}.mapPopup p{margin:4px 0;color:#6b7280;font-size:12px}.mapPopup button{margin-top:8px;padding:7px 10px;border-radius:10px;background:#0a0a0f;color:white;font-size:12px;font-weight:700}
+.rating-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:14px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.rating-card h3{margin:0 0 6px;font-family:var(--serif);font-size:16px}.rating-card p{margin:6px 0 0;color:var(--muted);line-height:1.65;font-size:13px}
 .maphead{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;align-items:flex-start}
 .maphead h3{margin:0;font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:-.3px}
 .maphead p{margin:5px 0 0;color:var(--muted);font-size:12px;font-weight:400}
-.regions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}
+.regions{display:none}
 .region{padding:9px 5px;border-radius:12px;background:var(--surface3);color:var(--muted);font-size:11px;font-weight:600;border:1px solid var(--border);letter-spacing:.3px;transition:all .18s}
 .region.has{background:var(--ink);color:white;border-color:var(--ink)}
 .kpath{fill:#f3f4f6;stroke:#d1d5db;stroke-width:1.2}
@@ -185,6 +191,7 @@ svg text{font-family:var(--sans)}
 .info-key{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px}
 .info-val{font-size:14px;color:var(--ink);font-weight:500}
 </style>
+<!-- build: 20260514-001-cache-reset -->
 </head>
 <body>
 <div class="app">
@@ -226,6 +233,7 @@ svg text{font-family:var(--sans)}
         <div class="field"><label>구분</label><select id="tripCountry"><option>국내</option><option>해외</option></select></div>
         <div class="field"><label>지역</label><select id="tripRegion"></select></div>
       </div>
+      <div class="field"><label>시·군·구</label><input id="tripCity" placeholder="예: 서귀포시, 강릉시, 종로구"></div>
       <div class="row2">
         <div class="field"><label>시작일</label><input id="tripStart" type="date" required></div>
         <div class="field"><label>종료일</label><input id="tripEnd" type="date" required></div>
@@ -267,6 +275,7 @@ svg text{font-family:var(--sans)}
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const NEW_DB='travel_record_pwa_db_v1';
 const STORE='trips';
@@ -294,7 +303,37 @@ const touristSpots={
 };
 ;
 
-let st={v:'cover',trips:[],sel:null,filter:'전체',q:'',tab:'일정',day:1};
+const regionCenters={서울:[37.5665,126.9780],경기:[37.4138,127.5183],인천:[37.4563,126.7052],강원:[37.8228,128.1555],충북:[36.8,127.7],충남:[36.5184,126.8],전북:[35.7175,127.153],전남:[34.8679,126.991],경북:[36.4919,128.8889],경남:[35.4606,128.2132],부산:[35.1796,129.0756],제주:[33.4996,126.5312],대전:[36.3504,127.3845],대구:[35.8714,128.6014],광주:[35.1595,126.8526],울산:[35.5384,129.3114],세종:[36.48,127.289],해외:[35,135]};
+const cityCenters={'서울':[37.5665,126.9780],'종로구':[37.5735,126.9788],'중구':[37.5636,126.9976],'용산구':[37.5326,126.9905],'강남구':[37.5172,127.0473],'송파구':[37.5145,127.1059],'마포구':[37.5663,126.9015],'수원시':[37.2636,127.0286],'성남시':[37.42,127.1265],'고양시':[37.6584,126.832],'용인시':[37.2411,127.1776],'가평군':[37.8315,127.5095],'파주시':[37.7599,126.7802],'인천':[37.4563,126.7052],'강화군':[37.7465,126.4879],'송도':[37.3895,126.6469],'춘천시':[37.8813,127.7298],'강릉시':[37.7519,128.8761],'속초시':[38.207,128.5918],'평창군':[37.3705,128.3904],'동해시':[37.5247,129.1143],'청주시':[36.6424,127.489],'충주시':[36.991,127.9259],'단양군':[36.9846,128.3655],'천안시':[36.8151,127.1139],'공주시':[36.4467,127.119],'부여군':[36.2757,126.9098],'태안군':[36.7456,126.2979],'전주시':[35.8242,127.148],'군산시':[35.9677,126.7366],'남원시':[35.4164,127.3904],'정읍시':[35.5699,126.856],'여수시':[34.7604,127.6622],'순천시':[34.9506,127.4875],'목포시':[34.8118,126.3922],'담양군':[35.3211,126.9882],'경주시':[35.8562,129.2247],'포항시':[36.019,129.3435],'안동시':[36.5684,128.7294],'구미시':[36.1195,128.3446],'창원시':[35.2285,128.6811],'통영시':[34.8544,128.4332],'거제시':[34.8806,128.6216],'진주시':[35.18,128.1076],'부산':[35.1796,129.0756],'해운대구':[35.1631,129.1635],'기장군':[35.2447,129.2223],'제주시':[33.4996,126.5312],'서귀포시':[33.2541,126.5601],'대전':[36.3504,127.3845],'대구':[35.8714,128.6014],'광주':[35.1595,126.8526],'울산':[35.5384,129.3114],'세종':[36.48,127.289]};
+const cityAliases={
+  '강릉':'강릉시','경포대':'강릉시','안목':'강릉시','주문진':'강릉시','정동진':'강릉시',
+  '안면도':'태안군','꽃지':'태안군','태안':'태안군','만리포':'태안군',
+  '속초':'속초시','설악산':'속초시','평창':'평창군','동해':'동해시','춘천':'춘천시',
+  '공주':'공주시','부여':'부여군','천안':'천안시','단양':'단양군','청주':'청주시','충주':'충주시',
+  '전주':'전주시','군산':'군산시','남원':'남원시','정읍':'정읍시','여수':'여수시','순천':'순천시','목포':'목포시','담양':'담양군',
+  '경주':'경주시','포항':'포항시','안동':'안동시','구미':'구미시','통영':'통영시','거제':'거제시','진주':'진주시','창원':'창원시',
+  '해운대':'해운대구','기장':'기장군','제주':'제주시','서귀포':'서귀포시','가평':'가평군','파주':'파주시','수원':'수원시','성남':'성남시','고양':'고양시','용인':'용인시'
+};
+function tripText(t){return [t.city,t.title,t.region,t.note,...(t.entries||[]).flatMap(e=>[e.title,e.body,e.type])].filter(Boolean).join(' ');}
+function locationKeyOf(t){
+  const raw=(t.city||'').trim();
+  if(cityCenters[raw]) return raw;
+  if(raw&&cityCenters[raw+'시']) return raw+'시';
+  if(raw&&cityCenters[raw+'군']) return raw+'군';
+  if(raw&&cityAliases[raw]) return cityAliases[raw];
+  const text=tripText(t);
+  for(const [alias,key] of Object.entries(cityAliases)){if(text.includes(alias)) return key;}
+  for(const key of Object.keys(cityCenters)){if(text.includes(key)||text.includes(key.replace(/[시군구]$/,''))) return key;}
+  return '';
+}
+function coordOf(t){
+  const key=locationKeyOf(t);
+  if(key&&cityCenters[key]) return cityCenters[key];
+  return regionCenters[t.region]||regionCenters.서울;
+}
+function locationLabelOf(t){const key=locationKeyOf(t);return key?`${key}청 기준`:'도/광역시 대표좌표 기준';}
+
+let st={v:'cover',trips:[],sel:null,filter:'전체',q:'',tab:'일정',day:1,ratingMin:1,ratingTrip:'전체'};
 
 function openDb(){
   return new Promise((res,rej)=>{
@@ -427,7 +466,7 @@ function card(t){
       <img src="${t.cover||cover}" onclick="openDetail('${t.id}')">
       <div>
         <h3 onclick="openDetail('${t.id}')">${esc(t.title)}${t.bookmarked?' 🔖':''}</h3>
-        <div class="meta">${esc(t.country)} &nbsp;·&nbsp; ${esc(t.region)} &nbsp;·&nbsp; ${days(t.startDate,t.endDate)}일</div>
+        <div class="meta">${esc(t.country)} &nbsp;·&nbsp; ${esc(t.region)} ${esc(t.city||'')} &nbsp;·&nbsp; ${days(t.startDate,t.endDate)}일</div>
         <div class="note">${esc(t.note)}</div>
         <div class="summary">${esc(tripPeriodSummary(t))}</div>
         <div class="acts">
@@ -522,44 +561,73 @@ function info(t){
 }
 
 function map(high=''){
-  const pts={서울:[45,24],경기:[42,31],인천:[35,28],강원:[62,26],충북:[50,43],충남:[35,48],대전:[44,51],세종:[42,46],경북:[67,51],대구:[64,62],전북:[39,62],광주:[35,73],전남:[35,77],경남:[59,73],울산:[73,70],부산:[72,78],제주:[32,96]};
-  const stats=Object.keys(pts).map(r=>({r,c:st.trips.filter(t=>t.country==='국내'&&t.region===r).length}));
+  const domestic=st.trips.filter(t=>t.country==='국내');
+  const target=high||st.filter;
+  const focused=(target&&target!=='전체'&&target!=='국내'&&target!=='해외'&&target!=='북마크')?domestic.filter(t=>t.region===target):domestic;
+  const count=focused.length||domestic.length;
+  setTimeout(()=>initRealMap(target),0);
   return `
     <div class="mapbox">
       <div class="maphead">
-        <div><h3>대한민국 여행 지도</h3><p>기록이 있는 지역을 확인하세요</p></div>
+        <div><h3>실제 지도 방문기록</h3><p>시·군·구 단위로 마커를 표시하고, 마커를 누르면 여행기록이 열립니다.</p></div>
+        <span class="badge">${count}건</span>
       </div>
-      <svg viewBox="0 0 100 110" width="100%" height="310">
-        <path class="kpath" d="M47 4 C61 7 78 19 81 35 C85 53 78 69 68 82 C58 95 42 99 30 88 C18 78 17 61 24 47 C30 35 27 23 35 13 C38 8 41 5 47 4Z"/>
-        <path class="kpath" d="M31 96 C35 93 42 94 45 98 C41 104 31 104 27 100 C28 98 29 97 31 96Z"/>
-        ${Object.entries(pts).map(([r,[x,y]])=>{
-          const c=stats.find(s=>s.r===r).c;
-          const on=high===r||st.filter===r;
-          return `<g onclick="region('${r}')" style="cursor:pointer">
-            <circle cx="${x}" cy="${y}" r="${on?7:c?6:4.8}" fill="${on?'#0a0a0f':c?'#1c1c2e':'#fff'}" stroke="${on?'#0a0a0f':'#9ca3af'}" stroke-width="1.2"/>
-            ${c?`<text x="${x}" y="${y+2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="700">${c}</text>`:''}
-            <text x="${x}" y="${y+13}" text-anchor="middle" font-size="4.5" fill="#6b7280" font-weight="600">${r}</text>
-          </g>`;
-        }).join('')}
-      </svg>
-      <div class="regions">${stats.map(s=>`<button class="region ${s.c?'has':''}" onclick="region('${s.r}')">${s.r} ${s.c||''}</button>`).join('')}</div>
-      ${touristBox(high)}
+      <div id="realMap"></div>
+      ${!domestic.length?'<div class="empty" style="margin-top:12px">국내 여행 기록이 없습니다.<br>+ 버튼으로 지역과 시·군·구를 입력하면 지도에 표시됩니다.</div>':''}
+      ${touristBox(target)}
     </div>`;
 }
 
+function initRealMap(target=''){
+  const el=document.getElementById('realMap');if(!el)return;
+  const rows=st.trips.filter(t=>t.country==='국내' && (!target||['전체','국내','해외','북마크'].includes(target)||t.region===target));
+  if(!window.L){el.outerHTML='<div class="mapFallback">실제 지도 소스를 불러오지 못했습니다.<br>인터넷 연결 후 다시 열면 지도에 방문기록이 표시됩니다.</div>';return;}
+  const center=target&&regionCenters[target]?regionCenters[target]:[36.4,127.9];
+  const zoom=target&&regionCenters[target]?8:6;
+  const m=L.map(el,{zoomControl:true,attributionControl:true}).setView(center,zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(m);
+  const bounds=[];
+  rows.forEach((t,i)=>{
+    const c=coordOf(t);bounds.push(c);
+    const entryCount=t.entries?.length||0;
+    const avg=entryCount?((t.entries||[]).reduce((a,e)=>a+Number(e.rating||0),0)/entryCount).toFixed(1):'없음';
+    const popup=`<div class="mapPopup"><b>${esc(t.title)}</b><p>${esc(t.region)} ${esc(t.city||'')} · ${entryCount}개 기록 · 평균별점 ${avg}</p><p>표시 기준: ${esc(locationLabelOf(t))}</p><button onclick="openDetail('${t.id}')">여행기록 보기</button></div>`;
+    L.marker(c).addTo(m).bindPopup(popup);
+  });
+  if(bounds.length){m.fitBounds(bounds,{padding:[32,32],maxZoom:11});}
+}
+
 function touristBox(r){
-  const key=r&&touristSpots[r]?r:(st.filter&&touristSpots[st.filter]?st.filter:'제주');
+  const key=r&&touristSpots[r]?r:(st.filter&&touristSpots[st.filter]?st.filter:'서울');
   const rows=touristSpots[key]||[];
   return `<div class="sec-label">${esc(key)} 유명 관광지</div><div class="tour-list">${rows.map(a=>`<div class="tour-item"><b>${esc(a[0])}</b>${esc(a[1])}</div>`).join('')}</div>`;
 }
 function showRatingSearch(id){
-  const t=st.trips.find(a=>a.id===id)||sel();if(!t)return;
-  const min=Number(prompt('조회할 최소 별점을 입력하세요. 예: 4', '4')||0);
-  const rows=(t.entries||[]).filter(e=>Number(e.rating||0)>=min).sort((a,b)=>Number(b.rating||0)-Number(a.rating||0));
-  if(!rows.length){toast(`${min}점 이상 기록이 없습니다`);return}
-  MARKER
-  statusMsg(`별점 ${min}점 이상 ${rows.length}건 조회 완료`);
+  const t=st.trips.find(a=>a.id===id)||sel();
+  if(t)st.ratingTrip=t.id;
+  st.ratingMin=4;
+  st.v='rating';
+  render();
+  statusMsg('별점 조회 화면을 열었습니다',1200);
 }
+
+function rating(){
+  const min=Number(st.ratingMin||1);
+  const trips=st.ratingTrip==='전체'?st.trips:st.trips.filter(t=>t.id===st.ratingTrip);
+  const rows=[];
+  trips.forEach(t=>(t.entries||[]).forEach(e=>{if(Number(e.rating||0)>=min)rows.push({t,e})}));
+  rows.sort((a,b)=>Number(b.e.rating||0)-Number(a.e.rating||0)||(a.e.time||'').localeCompare(b.e.time||''));
+  return `
+    <div class="mapbox">
+      <div class="maphead"><div><h3>별점 조회</h3><p>세부일정에 입력한 별점을 기준으로 조회합니다.</p></div><span class="badge">${rows.length}건</span></div>
+      <div class="row2">
+        <div class="field"><label>최소 별점</label><select id="ratingMin" onchange="st.ratingMin=this.value;render()">${[1,2,3,4,5].map(n=>`<option value="${n}" ${min===n?'selected':''}>${n}점 이상</option>`).join('')}</select></div>
+        <div class="field"><label>여행 선택</label><select id="ratingTrip" onchange="st.ratingTrip=this.value;render()"><option value="전체">전체 여행</option>${st.trips.map(t=>`<option value="${t.id}" ${st.ratingTrip===t.id?'selected':''}>${esc(t.title)}</option>`).join('')}</select></div>
+      </div>
+      ${rows.length?rows.map(({t,e})=>`<div class="rating-card" onclick="openDetail('${t.id}')"><h3>${starText(e.rating)} · ${esc(e.title)}</h3><div class="meta">${esc(t.title)} · ${esc(t.region)} ${esc(t.city||'')} · ${e.day}일차 ${esc(e.time||'')}</div><p>${esc(e.body)}</p></div>`).join(''):'<div class="empty">조건에 맞는 별점 기록이 없습니다.</div>'}
+    </div>`;
+}
+
 
 function setting(){
   return `
@@ -575,6 +643,7 @@ function setting(){
       </div>
       <div class="acts" style="flex-direction:column;gap:8px">
         <button class="secondary" onclick="document.getElementById('backupImportFile').click()">백업 파일 복원 (JSON)</button>
+        <button class="secondary" onclick="st.v='rating';st.ratingTrip='전체';render()">별점 조회</button>
         <button class="secondary" onclick="exportData()">현재 데이터 백업 (JSON)</button>
         <button class="danger" onclick="resetOnlyNew()">데이터 초기화</button>
       </div>
@@ -583,14 +652,14 @@ function setting(){
 
 function render(){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.v===st.v));
-  const titles={cover:'여행기록',home:'여행 목록',detail:'여행 상세',map:'국내 지도',setting:'데이터 관리'};
+  const titles={cover:'여행기록',home:'여행 목록',detail:'여행 상세',map:'국내 지도',rating:'별점 조회',setting:'데이터 관리'};
   document.getElementById('headTitle').textContent=titles[st.v]||'여행기록';
-  const h=st.v==='cover'?coverView():st.v==='home'?home():st.v==='detail'?detail():st.v==='map'?map():setting();
+  const h=st.v==='cover'?coverView():st.v==='home'?home():st.v==='detail'?detail():st.v==='map'?map():st.v==='rating'?rating():setting();
   document.getElementById('page').innerHTML=h;
 }
 
 function openDetail(x){statusMsg('일정을 불러오는 중입니다...',900);st.sel=x;st.v='detail';st.tab='일정';st.day=1;render();statusMsg('일정 선택 완료',1200)}
-function region(r){st.filter=r;st.v='home';render();toast(r+' 지역으로 필터링됨')}
+function region(r){st.filter=r;st.v='map';render();toast(r+' 지역 방문기록 표시')}
 function openM(x){document.getElementById(x).classList.add('show')}
 function closeM(x){document.getElementById(x).classList.remove('show')}
 function fillRegion(c,cur){
@@ -603,7 +672,7 @@ function newTrip(){
   document.getElementById('tripModalTitle').textContent='새 여행 기록';
   const d=new Date().toISOString().slice(0,10);
   tripStart.value=d;tripEnd.value=d;
-  tripCountry.value='국내';fillRegion('국내','제주');
+  tripCountry.value='국내';fillRegion('국내','제주');tripCity.value='';
   tripPreview.textContent='사진을 선택하세요';
   delete tripPreview.dataset.src;
   openM('tripModal');
@@ -612,7 +681,7 @@ function editTrip(x){
   const t=st.trips.find(a=>a.id===x);if(!t)return;
   tripModalTitle.textContent='여행 수정';
   tripId.value=t.id;tripTitle.value=t.title;tripCountry.value=t.country;
-  fillRegion(t.country,t.region);tripStart.value=t.startDate;tripEnd.value=t.endDate;
+  fillRegion(t.country,t.region);tripCity.value=t.city||'';tripStart.value=t.startDate;tripEnd.value=t.endDate;
   tripNote.value=t.note;tripPreview.innerHTML=`<img src="${t.cover||cover}">`;
   delete tripPreview.dataset.src;openM('tripModal');
 }
@@ -635,7 +704,7 @@ function normalizeTrip(raw){
   const now=new Date().toISOString();
   const country=raw.country||(raw.region==='해외'?'해외':'국내');
   const region=raw.region||(country==='해외'?'해외':'서울');
-  return {id:raw.id||uid(),title:raw.title||raw.name||raw.tripTitle||'복원 여행',country,region,startDate:raw.startDate||raw.start||new Date().toISOString().slice(0,10),endDate:raw.endDate||raw.end||raw.startDate||new Date().toISOString().slice(0,10),note:raw.note||raw.memo||raw.description||'',cover:raw.cover||raw.photo||raw.image||cover,bookmarked:!!raw.bookmarked,entries:(raw.entries||raw.records||[]).map(e=>({id:e.id||uid(),day:Number(e.day||1),time:e.time||'',type:e.type||'memo',title:e.title||e.name||'기록',body:e.body||e.note||e.memo||e.content||'',rating:Number(e.rating||0),photos:e.photos||e.images||[]})),createdAt:raw.createdAt||now,updatedAt:raw.updatedAt||now};
+  return {id:raw.id||uid(),title:raw.title||raw.name||raw.tripTitle||'복원 여행',country,region,city:raw.city||raw.sigungu||raw.cityName||'',startDate:raw.startDate||raw.start||new Date().toISOString().slice(0,10),endDate:raw.endDate||raw.end||raw.startDate||new Date().toISOString().slice(0,10),note:raw.note||raw.memo||raw.description||'',cover:raw.cover||raw.photo||raw.image||cover,bookmarked:!!raw.bookmarked,entries:(raw.entries||raw.records||[]).map(e=>({id:e.id||uid(),day:Number(e.day||1),time:e.time||'',type:e.type||'memo',title:e.title||e.name||'기록',body:e.body||e.note||e.memo||e.content||'',rating:Number(e.rating||0),photos:e.photos||e.images||[]})),createdAt:raw.createdAt||now,updatedAt:raw.updatedAt||now};
 }
 function extractTrips(data){if(Array.isArray(data))return data;if(data?.trips)return data.trips;if(data?.data)return data.data;if(data?.records)return data.records;return []}
 function readJsonFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{try{res(JSON.parse(r.result))}catch(e){rej(e)}};r.onerror=()=>rej(r.error);r.readAsText(file,'utf-8')})}
@@ -676,7 +745,7 @@ entryPhotos.onchange=async e=>{const cur=JSON.parse(entryPreview.dataset.src||'[
 tripForm.onsubmit=async e=>{
   e.preventDefault();
   const old=st.trips.find(t=>t.id===tripId.value);
-  const t={id:tripId.value||uid(),title:tripTitle.value,country:tripCountry.value,region:tripRegion.value,startDate:tripStart.value,endDate:tripEnd.value,note:tripNote.value,cover:tripPreview.dataset.src||old?.cover||cover,bookmarked:old?.bookmarked||false,entries:old?.entries||[],createdAt:old?.createdAt||new Date().toISOString()};
+  const t={id:tripId.value||uid(),title:tripTitle.value,country:tripCountry.value,region:tripRegion.value,startDate:tripStart.value,endDate:tripEnd.value,note:tripNote.value,city:tripCity.value.trim(),cover:tripPreview.dataset.src||old?.cover||cover,bookmarked:old?.bookmarked||false,entries:old?.entries||[],createdAt:old?.createdAt||new Date().toISOString()};
   await put(t);st.sel=t.id;closeM('tripModal');await reload(false);st.v='detail';render();toast('여행이 저장되었습니다');
 };
 entryForm.onsubmit=async e=>{
@@ -707,9 +776,27 @@ async function deleteEntry(id){
 }
 backupImportFile.onchange=e=>{const f=e.target.files?.[0];if(f)importBackupFile(f);e.target.value=''};
 drawRatingBtns(0);
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}))}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./service-worker.js?v=20260514-001-cache-reset', { updateViaCache: 'none' })
+      .then(reg=>{
+        reg.update && reg.update();
+        if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+        reg.addEventListener('updatefound',()=>{
+          const nw=reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange',()=>{
+            if(nw.state==='installed' && navigator.serviceWorker.controller) location.reload();
+          });
+        });
+      })
+      .catch(()=>{});
+  });
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!window.__swReloaded){ window.__swReloaded=true; location.reload(); }
+  });
+}
 boot();
 </script>
 </body>
-</html>  alert(rows.map(e=>`${e.day}일차 ${e.time||''} · ${starText(e.rating)}\n${e.title}`).join('\n\n'));
-
+</html>
