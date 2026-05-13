@@ -1,8 +1,8 @@
 {
   "name": "여행기록",
   "short_name": "여행기록",
-  "description": "여행기록 지도/별점 조회 갱신판",
-  "start_url": "./index.html?v=20260514-001-cache-reset",
+  "description": "여행기록 지도/별점 조회 세계지도 갱신판",
+  "start_url": "./index.html?v=20260514-003-world-cityhall",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
