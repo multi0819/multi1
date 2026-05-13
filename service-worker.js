@@ -1,5 +1,5 @@
-const CACHE_NAME = 'travel-record-20260514-003-world-cityhall';
-const ASSETS = ['./index.html?v=20260514-003-world-cityhall', './manifest.json?v=20260514-003-world-cityhall'];
+const CACHE_NAME = 'travel-record-20260514-004-world-all-map';
+const ASSETS = ['./index.html?v=20260514-004-world-all-map', './manifest.json?v=20260514-004-world-all-map'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -27,7 +27,7 @@ self.addEventListener('fetch', event => {
   if (isHtml || isManifest) {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
-        .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html?v=20260514-003-world-cityhall')))
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html?v=20260514-004-world-all-map')))
     );
     return;
   }
