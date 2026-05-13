@@ -632,7 +632,12 @@ function info(t){
 
 function map(high=''){
   const target=high||st.filter;
-  const rows=st.trips.filter(t=>target==='해외'?t.country==='해외':(target&&target!=='전체'&&target!=='국내'&&target!=='북마크'?t.region===target:t.country==='국내'));
+  const rows=st.trips.filter(t=>{
+    if(target==='해외') return t.country==='해외';
+    if(target==='국내') return t.country==='국내';
+    if(target==='전체'||target==='북마크'||!target) return true;
+    return t.country==='국내' && t.region===target;
+  });
   const count=rows.length;
   setTimeout(()=>initRealMap(target),0);
   return `
@@ -649,10 +654,17 @@ function map(high=''){
 
 async function initRealMap(target=''){
   const el=document.getElementById('realMap');if(!el)return;
-  const rows=st.trips.filter(t=>target==='해외'?t.country==='해외':(target&&target!=='전체'&&target!=='국내'&&target!=='북마크'?t.country==='국내'&&t.region===target:t.country==='국내'));
+  const rows=st.trips.filter(t=>{
+    if(target==='해외') return t.country==='해외';
+    if(target==='국내') return t.country==='국내';
+    if(target==='전체'||target==='북마크'||!target) return true;
+    return t.country==='국내'&&t.region===target;
+  });
   if(!window.L){el.outerHTML='<div class="mapFallback">실제 지도 소스를 불러오지 못했습니다.<br>인터넷 연결 후 다시 열면 지도에 방문기록이 표시됩니다.</div>';return;}
-  const center=target==='해외'?[20,0]:(target&&regionCenters[target]?regionCenters[target]:[36.4,127.9]);
-  const zoom=target==='해외'?2:(target&&regionCenters[target]?8:6);
+  const hasOverseas=rows.some(t=>t.country==='해외');
+  const onlyOverseas=rows.length>0&&rows.every(t=>t.country==='해외');
+  const center=(target==='해외'||onlyOverseas)?[20,0]:(target&&regionCenters[target]?regionCenters[target]:[36.4,127.9]);
+  const zoom=(target==='해외'||onlyOverseas)?2:(target&&regionCenters[target]?8:6);
   const m=L.map(el,{zoomControl:true,attributionControl:true}).setView(center,zoom);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(m);
   const bounds=[];
@@ -666,7 +678,7 @@ async function initRealMap(target=''){
     const popup=`<div class="mapPopup"><b>${esc(t.title)}</b><p>${esc(t.region)} ${esc(t.city||'')} · ${entryCount}개 기록 · 평균별점 ${avg}</p><p>표시 기준: ${esc(locationLabelOf(t))}</p><button onclick="openDetail('${t.id}')">여행기록 보기</button></div>`;
     L.marker(c).addTo(m).bindPopup(popup);
   }
-  if(bounds.length){m.fitBounds(bounds,{padding:[32,32],maxZoom:target==='해외'?6:11});}
+  if(bounds.length){m.fitBounds(bounds,{padding:[32,32],maxZoom:(target==='해외'||onlyOverseas)?6:(hasOverseas?4:11)});}
 }
 
 function touristBox(r){
@@ -850,7 +862,7 @@ backupImportFile.onchange=e=>{const f=e.target.files?.[0];if(f)importBackupFile(
 drawRatingBtns(0);
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./service-worker.js?v=20260514-003-world-cityhall', { updateViaCache: 'none' })
+    navigator.serviceWorker.register('./service-worker.js?v=20260514-004-world-all-map', { updateViaCache: 'none' })
       .then(reg=>{
         reg.update && reg.update();
         if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
