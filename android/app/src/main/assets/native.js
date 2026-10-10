@@ -1,0 +1,4 @@
+'use strict';
+let preparingBackup=false;
+window.saveBlob=async function(blob,name){if(window.AndroidTravel){if(preparingBackup)throw Error('백업을 준비 중입니다. 잠시 후 다시 시도해 주세요.');let started=false;preparingBackup=true;try{AndroidTravel.saveStart(name,blob.type||'application/octet-stream');started=true;for(let offset=0;offset<blob.size;offset+=32768){const bytes=new Uint8Array(await blob.slice(offset,offset+32768).arrayBuffer());let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);AndroidTravel.saveChunk(btoa(binary))}AndroidTravel.saveFinish()}catch(e){if(started)try{AndroidTravel.saveAbort()}catch{}throw Error('파일 저장을 준비하지 못했습니다. 다른 저장이 끝난 후 다시 시도해 주세요.')}finally{preparingBackup=false}}else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),10000)}};
+if(window.AndroidTravel)window.print=()=>AndroidTravel.printPage();
